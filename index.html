@@ -19,6 +19,33 @@
     --color-border:#E1E5EC; --color-text:#1D2430; --color-text-muted:#657085;
     --font-display:'Lora', Georgia, serif; --font-body:'Inter', -apple-system, sans-serif; --font-mono:'IBM Plex Mono', monospace;
   }
+  html[data-theme="dark"]{
+    --color-bg:#0d1117; --color-surface:#161b22;
+    --color-navy:#2d4166; --color-navy-deep:#0a1120;
+    --color-gold:#d4af37; --color-gold-soft:#3a3320;
+    --color-success:#3fb877; --color-success-soft:#122a1d;
+    --color-pending:#e0654a; --color-pending-soft:#2e1712;
+    --color-border:#30363d; --color-text:#e6edf3; --color-text-muted:#8b949e;
+  }
+  html[data-theme="dark"] .verify-card, html[data-theme="dark"] .panel, html[data-theme="dark"] .modal-box{
+    background:var(--color-surface);
+  }
+  body.focus-mode #todayStatsPanel,
+  body.focus-mode #prioritySitesPanel,
+  body.focus-mode #recentActivityPanel{
+    display:none !important;
+  }
+  @media print{
+    header.topbar, .panel, .login-btn, .refresh-btn, .btn, #helpChatToggle, #helpChatPanel,
+    #toastContainer, .sortable-th .sort-arrow, .search-hint, .verify-controls{
+      display:none !important;
+    }
+    body{ background:#fff; color:#000; }
+    table{ border-collapse:collapse; width:100%; }
+    th, td{ border:1px solid #000 !important; padding:6px 8px !important; color:#000 !important; background:#fff !important; }
+    .status-pill{ border:1px solid #000; background:#fff !important; color:#000 !important; }
+    tr{ border-left:none !important; }
+  }
   *{box-sizing:border-box;}
   body{ margin:0; background:var(--color-bg); color:var(--color-text); font-family:var(--font-body); -webkit-font-smoothing:antialiased; scrollbar-width:thin; scrollbar-color:var(--color-navy) var(--color-bg); }
   ::-webkit-scrollbar{ width:9px; height:9px; }
@@ -336,6 +363,8 @@
     <div class="topbar-meta" id="topbarMeta">Loading…</div>
     <div class="topbar-meta" id="lastRefreshedLabel" style="font-size:10.5px; opacity:.7; margin-top:2px;"></div>
     <button class="refresh-btn" id="refreshBtn"><span class="refresh-icon" id="refreshIcon">⟳</span> Refresh</button>
+    <button class="refresh-btn" id="focusModeBtn" title="Hide side panels for a focused view">◱ Focus</button>
+    <button class="refresh-btn" id="darkModeBtn" title="Toggle dark mode">🌙</button>
     <div class="user-menu">
       <button class="welcome-btn" id="welcomeMsgBtn"><span id="welcomeMsg">Welcome</span> <span class="caret">▾</span></button>
       <div class="user-menu-dropdown" id="userMenuDropdown">
@@ -658,6 +687,57 @@ async function fetchStudents(){
 
 document.getElementById('refreshBtn').addEventListener('click', fetchStudents);
 
+// --- Dark mode ---
+const darkModeBtn = document.getElementById('darkModeBtn');
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  if(darkModeBtn) darkModeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+  localStorage.setItem('bioDeskTheme', theme);
+}
+applyTheme(localStorage.getItem('bioDeskTheme') || 'light');
+if(darkModeBtn){
+  darkModeBtn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    applyTheme(current === 'dark' ? 'light' : 'dark');
+  });
+}
+
+// --- Focus mode (hides side panels for a distraction-free view) ---
+const focusModeBtn = document.getElementById('focusModeBtn');
+let focusModeOn = false;
+function applyFocusMode(){
+  document.body.classList.toggle('focus-mode', focusModeOn);
+  if(focusModeBtn) focusModeBtn.textContent = focusModeOn ? '◱ Exit Focus' : '◱ Focus';
+}
+if(focusModeBtn){
+  focusModeBtn.addEventListener('click', () => {
+    focusModeOn = !focusModeOn;
+    applyFocusMode();
+  });
+}
+
+// --- Keyboard shortcuts: "/" focuses search, "Esc" closes modals, "R" refreshes ---
+document.addEventListener('keydown', (e) => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
+
+  if(e.key === 'Escape'){
+    const overlays = document.querySelectorAll('.modal-overlay');
+    if(overlays.length) overlays[overlays.length - 1].remove();
+    return;
+  }
+  if(isTyping) return;
+
+  if(e.key === '/'){
+    e.preventDefault();
+    const search = document.getElementById('searchInput');
+    if(search) search.focus();
+  } else if(e.key === 'r' || e.key === 'R'){
+    fetchStudents();
+  }
+});
+
+
 let todayVerifiedList = [];
 function renderPrioritySites(){
   const panel = document.getElementById('prioritySitesPanel');
@@ -968,6 +1048,7 @@ function renderAnnouncements(announcements){
 }
 
 let hasShownCompletionCelebration = false;
+let lastCelebratedMilestone = 0;
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('.btn');
   if(!btn) return;
@@ -1023,6 +1104,12 @@ function renderStats(){
     launchConfetti();
   } else if(done < roster.length){
     hasShownCompletionCelebration = false;
+  }
+
+  const currentMilestone = Math.floor(done / 100) * 100;
+  if(currentMilestone > 0 && currentMilestone > lastCelebratedMilestone && done < roster.length){
+    lastCelebratedMilestone = currentMilestone;
+    showToast(`🎉 ${currentMilestone} students verified — keep going!`, 'success');
   }
 }
 
