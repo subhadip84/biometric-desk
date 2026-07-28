@@ -312,7 +312,7 @@
         </div>
         <div class="login-input-wrap">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1D2430" stroke-width="2"><path d="M9 9a3 3 0 1 1 4 2.8c-.8.4-1.5 1-1.5 2.2"/><circle cx="12" cy="17" r=".5" fill="#1D2430"/></svg>
-          <input type="text" id="loginCaptchaAnswer" autocomplete="off" placeholder="Type the code above" required>
+          <input type="text" id="loginCaptchaAnswer" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Type the code above" required>
         </div>
       </div>
       <button type="submit" class="login-btn" id="loginSubmitBtn">Sign In</button>
@@ -600,7 +600,14 @@ function showToast(message, type){
 
 // IMPORTANT: replace this with your actual deployed Apps Script Web App URL
 // (Deploy > Manage deployments > copy the "Web app" URL, ending in /exec)
-const API_BASE_URL = 'PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE';
+const API_BASE_URL = 'https://biometric-backend-ijiv.onrender.com';
+
+// Silently "wake up" the backend the moment the page loads, giving Render's
+// free-tier server a head start on waking from sleep before the user even
+// finishes typing their credentials and clicks Sign In. This doesn't
+// eliminate the cold-start delay entirely, but meaningfully reduces how
+// often it's actually hit in practice.
+fetch(API_BASE_URL, { method: 'GET' }).catch(() => { /* fine if this fails - just a warm-up attempt */ });
 
 function runScript(fnName, ...args){
   return fetch(API_BASE_URL, {
