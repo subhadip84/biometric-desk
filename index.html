@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -609,7 +608,14 @@ function runScript(fnName, ...args){
     headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight
     body: JSON.stringify({ fn: fnName, args: args })
   })
-    .then(response => response.json())
+    .then(async response => {
+      const text = await response.text();
+      try{
+        return JSON.parse(text);
+      }catch(parseErr){
+        throw new Error('The server is still starting up (this can take up to a minute after inactivity) — please try again in a moment.');
+      }
+    })
     .catch(err => { throw new Error(err && err.message ? err.message : 'Network error contacting the backend.'); });
 }
 
