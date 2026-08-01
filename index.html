@@ -1221,6 +1221,33 @@ function showDemoWelcomeModal(){
   overlay.querySelector('#demoWelcomeOkBtn').addEventListener('click', () => overlay.remove());
 }
 
+function showDemoDisclaimerBanner(){
+  const banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:1100; max-width:440px; width:calc(100% - 32px); background:var(--color-navy-deep); color:#fff; border-radius:12px; padding:14px 18px; box-shadow:0 14px 36px rgba(0,0,0,.3); font-size:12.5px; line-height:1.6;';
+  banner.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+      <div>
+        <strong style="color:var(--color-gold);">Demo Account:</strong> you have broad access (manage users, imports, messages, etc.), but <strong>cannot</strong> mark biometric status, delete a student, or delete a user account.
+      </div>
+      <span id="demoBannerCloseBtn" style="cursor:pointer; flex-shrink:0; opacity:.7; font-size:16px; line-height:1;">✕</span>
+    </div>
+    <div style="margin-top:8px; height:2px; background:rgba(255,255,255,.15); border-radius:2px; overflow:hidden;">
+      <div id="demoBannerProgress" style="height:100%; background:var(--color-gold); width:100%;"></div>
+    </div>
+  `;
+  document.body.appendChild(banner);
+
+  const progressBar = banner.querySelector('#demoBannerProgress');
+  progressBar.style.transition = 'width 10s linear';
+  requestAnimationFrame(() => { progressBar.style.width = '0%'; });
+
+  const dismissTimer = setTimeout(() => banner.remove(), 10000);
+  banner.querySelector('#demoBannerCloseBtn').addEventListener('click', () => {
+    clearTimeout(dismissTimer);
+    banner.remove();
+  });
+}
+
 function showAlertModal(message, title){
   return new Promise(resolve => {
     const overlay = document.createElement('div');
@@ -1952,6 +1979,8 @@ loginForm.addEventListener('submit', async (e) => {
       enterApp();
       if(data.showDemoWelcome){
         showDemoWelcomeModal();
+      } else if(data.isDemo){
+        showDemoDisclaimerBanner();
       }
     }
     // Fetched and logged well after login has fully resolved, deliberately
