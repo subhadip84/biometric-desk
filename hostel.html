@@ -152,11 +152,12 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1D2430" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
           <input type="text" id="searchInput" placeholder="App No / Reg No / Machine Code / Name" autocomplete="off">
         </div>
+        <div style="font-size:11.5px; color:var(--color-text-muted); margin-top:6px;">Type any part of Application/Roll No, Registration Number, Machine Code, or name — then press Enter or Search.</div>
         <div id="suggestions"></div>
         <div class="stat-grid">
-          <div class="stat"><div class="n" id="statTotal">0</div><div class="l">Total</div></div>
-          <div class="stat done"><div class="n" id="statDone">0</div><div class="l">Verified</div></div>
-          <div class="stat pending"><div class="n" id="statPending">0</div><div class="l">Pending</div></div>
+          <div class="stat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-navy)" stroke-width="2" style="margin-bottom:4px;"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v2M16 4v2"/></svg><div class="n" id="statTotal">0</div><div class="l">Total</div></div>
+          <div class="stat done"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2" style="margin-bottom:4px;"><path d="M20 6 9 17l-5-5"/></svg><div class="n" id="statDone">0</div><div class="l">Verified</div></div>
+          <div class="stat pending"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-pending)" stroke-width="2" style="margin-bottom:4px;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><div class="n" id="statPending">0</div><div class="l">Pending</div></div>
         </div>
       </div>
 
@@ -487,7 +488,9 @@ function renderHostelSummary(){
   if(!rows.length){
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:16px; color:var(--color-text-muted);">No data yet.</td></tr>';
   } else {
-    tbody.innerHTML = rows.map(r => `
+    const totalDone = rows.reduce((sum, r) => sum + r.done, 0);
+    const totalPending = rows.reduce((sum, r) => sum + r.pending, 0);
+    const rowsHtml = rows.map(r => `
       <tr>
         <td>${escapeHtml(r.name)}</td>
         <td><span class="status-pill done summary-clickable" data-hostel="${escapeHtml(r.name)}" data-status="done" style="cursor:pointer;">${r.done}</span></td>
@@ -495,6 +498,15 @@ function renderHostelSummary(){
         <td><span class="summary-clickable" data-hostel="${escapeHtml(r.name)}" data-status="all" style="cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px;">${r.total}</span></td>
       </tr>
     `).join('');
+    const totalRow = `
+      <tr style="font-weight:700; border-top:2px solid var(--color-border);">
+        <td>Total</td>
+        <td><span class="status-pill done summary-clickable" data-hostel="__all__" data-status="done" style="cursor:pointer;">${totalDone}</span></td>
+        <td><span class="status-pill pending summary-clickable" data-hostel="__all__" data-status="pending" style="cursor:pointer;">${totalPending}</span></td>
+        <td><span class="summary-clickable" data-hostel="__all__" data-status="all" style="cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px;">${totalDone + totalPending}</span></td>
+      </tr>
+    `;
+    tbody.innerHTML = rowsHtml + totalRow;
     tbody.querySelectorAll('.summary-clickable').forEach(el => {
       el.addEventListener('click', () => downloadHostelDetailRecords(el.dataset.hostel, el.dataset.status));
     });
@@ -522,7 +534,7 @@ function renderHostelSummary(){
 }
 
 function downloadHostelDetailRecords(hostelName, statusFilter){
-  let matches = hostel.filter(s => (s.hostelName || '(No Hostel Assigned)') === hostelName);
+  let matches = hostelName === '__all__' ? hostel.slice() : hostel.filter(s => (s.hostelName || '(No Hostel Assigned)') === hostelName);
   if(statusFilter === 'done') matches = matches.filter(s => s.status === 'done');
   if(statusFilter === 'pending') matches = matches.filter(s => s.status !== 'done');
 
@@ -535,7 +547,8 @@ function downloadHostelDetailRecords(hostelName, statusFilter){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   const statusLabel = statusFilter === 'all' ? 'all' : statusFilter;
-  a.href = url; a.download = `hostel_${hostelName.replace(/[^a-zA-Z0-9]/g, '_')}_${statusLabel}_${Date.now()}.csv`;
+  const namePart = hostelName === '__all__' ? 'all_hostels' : hostelName.replace(/[^a-zA-Z0-9]/g, '_');
+  a.href = url; a.download = `hostel_${namePart}_${statusLabel}_${Date.now()}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
   showToast(`Downloaded ${matches.length} record(s).`, 'success');
