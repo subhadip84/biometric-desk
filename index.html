@@ -2667,13 +2667,21 @@ function showAddUserModal(onSaved){
   populateSchoolDropdown(schoolSelect);
 
   function togglePermissionsSection(){
-    permissionsSection.style.display = (roleSelect.value === 'admin' || roleSelect.value === 'demo') ? 'block' : 'none';
+    const isStaff = roleSelect.value === 'staff';
+    permissionsSection.style.display = (roleSelect.value === 'admin' || roleSelect.value === 'demo' || isStaff) ? 'block' : 'none';
     const deleteStudentBox = permissionsSection.querySelector('.permCheckbox[value="deleteStudent"]');
     if(deleteStudentBox){
       const isDemo = roleSelect.value === 'demo';
       deleteStudentBox.disabled = isDemo;
       if(isDemo) deleteStudentBox.checked = false;
     }
+    // Staff can only ever be granted hostelAccess - hide every other checkbox
+    // for that role so it can't become a backdoor to broader admin permissions.
+    permissionsSection.querySelectorAll('.permCheckbox').forEach(box => {
+      const row = box.closest('label');
+      if(!row) return;
+      row.style.display = (isStaff && box.value !== 'hostelAccess') ? 'none' : 'flex';
+    });
   }
   togglePermissionsSection();
   roleSelect.addEventListener('change', togglePermissionsSection);
@@ -2899,13 +2907,21 @@ function showEditUserModal(user, onSaved){
   roleSelect.value = user.role;
 
   function togglePermissionsSection(){
-    permissionsSection.style.display = (roleSelect.value === 'admin' || roleSelect.value === 'demo') ? 'block' : 'none';
+    const isStaff = roleSelect.value === 'staff';
+    permissionsSection.style.display = (roleSelect.value === 'admin' || roleSelect.value === 'demo' || isStaff) ? 'block' : 'none';
     const deleteStudentBox = permissionsSection.querySelector('.permCheckbox[value="deleteStudent"]');
     if(deleteStudentBox){
       const isDemo = roleSelect.value === 'demo';
       deleteStudentBox.disabled = isDemo;
       if(isDemo) deleteStudentBox.checked = false;
     }
+    // Staff can only ever be granted hostelAccess - hide every other checkbox
+    // for that role so it can't become a backdoor to broader admin permissions.
+    permissionsSection.querySelectorAll('.permCheckbox').forEach(box => {
+      const row = box.closest('label');
+      if(!row) return;
+      row.style.display = (isStaff && box.value !== 'hostelAccess') ? 'none' : 'flex';
+    });
   }
   togglePermissionsSection();
   roleSelect.addEventListener('change', togglePermissionsSection);
