@@ -86,6 +86,8 @@
   .toast.show{ opacity:1; transform:translateY(0); }
   .toast.toast-success{ background:var(--color-success); }
   .toast.toast-error{ background:var(--color-pending); }
+  #refreshIcon.spinning{ animation: hostelSpin 0.7s linear infinite; }
+  @keyframes hostelSpin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -100,6 +102,7 @@
     </div>
   </div>
   <div style="display:flex; align-items:center; gap:16px;">
+    <button class="btn btn-ghost" id="refreshBtn" style="padding:6px 13px; font-size:12px;"><span id="refreshIcon" style="display:inline-block;">⟳</span> Refresh</button>
     <a class="backLink" id="backToMainLink" href="index.html">← Back to Main App</a>
     <span id="welcomeMsg" style="font-size:12.5px; color:#B9C2D6;"></span>
     <button class="btn btn-ghost" id="logoutBtn" style="padding:6px 13px; font-size:12px; background:transparent; color:#fff; border-color:rgba(255,255,255,.25);">Logout</button>
@@ -245,6 +248,8 @@ function initials(name){
 let hostel = [];
 
 async function loadHostelData(){
+  const refreshIcon = document.getElementById('refreshIcon');
+  if(refreshIcon) refreshIcon.classList.add('spinning');
   try{
     const data = await runScript('getHostelData');
     if(!data.ok){ showToast(data.error || 'Could not load hostel data.', 'error'); return; }
@@ -253,8 +258,12 @@ async function loadHostelData(){
     renderTable();
   }catch(err){
     showToast(err.message, 'error');
+  }finally{
+    if(refreshIcon) refreshIcon.classList.remove('spinning');
   }
 }
+
+document.getElementById('refreshBtn').addEventListener('click', () => { loadHostelData(); loadFreshUploadInfo(); });
 
 async function loadFreshUploadInfo(){
   if(!isAdminOrDemo) return;
@@ -567,6 +576,31 @@ document.getElementById('importVerifyBtn')?.addEventListener('click', () => show
 
 loadHostelData();
 loadFreshUploadInfo();
+
+// --- Background auto-refresh, matching the main app's behavior ---
+const AUTO_REFRESH_MS = 60 * 1000; // every 60 seconds
+let autoRefreshTimer = null;
+
+function startAutoRefresh(){
+  stopAutoRefresh();
+  autoRefreshTimer = setInterval(() => {
+    if(document.visibilityState === 'visible'){
+      loadHostelData();
+      loadFreshUploadInfo();
+    }
+  }, AUTO_REFRESH_MS);
+}
+function stopAutoRefresh(){
+  clearInterval(autoRefreshTimer);
+  autoRefreshTimer = null;
+}
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible'){
+    loadHostelData(); // catch up immediately when the tab becomes active again
+    loadFreshUploadInfo();
+  }
+});
+startAutoRefresh();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
