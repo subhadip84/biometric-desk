@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hostel Face Capture Desk — Adamas University</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
@@ -104,6 +105,7 @@
     border:none; cursor:pointer; font-size:13px; color:var(--color-text); border-radius:6px; font-family:var(--font-body); font-weight:500;
   }
   .menu-item:hover{ background:#F0F2F6; }
+  .chip.active{ background:var(--color-navy) !important; color:#fff !important; border-color:var(--color-navy) !important; }
 </style>
 </head>
 <body>
@@ -183,12 +185,36 @@
       </div>
 
       <div class="panel" style="margin-top:20px;">
-        <h2>Full hostel roster</h2>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
+          <h2 style="margin:0;">Full hostel roster</h2>
+          <div style="display:flex; gap:8px;">
+            <div class="chip active" data-filter="all" style="padding:6px 13px; border-radius:20px; border:1px solid var(--color-border); font-size:12px; font-weight:600; cursor:pointer; background:#fff; color:var(--color-text-muted);">All</div>
+            <div class="chip" data-filter="done" style="padding:6px 13px; border-radius:20px; border:1px solid var(--color-border); font-size:12px; font-weight:600; cursor:pointer; background:#fff; color:var(--color-text-muted);">Verified</div>
+            <div class="chip" data-filter="pending" style="padding:6px 13px; border-radius:20px; border:1px solid var(--color-border); font-size:12px; font-weight:600; cursor:pointer; background:#fff; color:var(--color-text-muted);">Pending</div>
+          </div>
+        </div>
+        <input type="text" id="tableQuickFilter" placeholder="🔍 Filter visible rows by name, App No, Reg No, or Hostel…" style="width:100%; padding:8px 14px; border-radius:20px; border:1px solid var(--color-border); font-size:12.5px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
         <div style="max-height:420px; overflow:auto; border:1px solid var(--color-border); border-radius:8px;">
           <table>
             <thead><tr><th>Name</th><th>App No</th><th>Hostel</th><th>Room</th><th>Status</th></tr></thead>
             <tbody id="tableBody"></tbody>
           </table>
+        </div>
+      </div>
+
+      <div class="panel" id="hostelSummaryPanel" style="margin-top:20px; display:none;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
+          <h2 style="margin:0;">Hostel-wise Summary</h2>
+          <button class="btn btn-ghost" id="downloadSummaryBtn" style="padding:6px 13px; font-size:12px;">Download Summary (CSV)</button>
+        </div>
+        <div style="max-height:280px; overflow:auto; border:1px solid var(--color-border); border-radius:8px;">
+          <table>
+            <thead><tr><th>Hostel Name</th><th>Verified</th><th>Pending</th><th>Total</th></tr></thead>
+            <tbody id="summaryTableBody"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:16px; height:240px;">
+          <canvas id="summaryChart"></canvas>
         </div>
       </div>
     </div>
@@ -220,6 +246,7 @@ document.getElementById('welcomeMsg').textContent = 'Welcome, ' + (sessionStorag
 const isAdminOrDemo = sessionStorage.getItem(ADMIN_KEY) === 'yes';
 if(isAdminOrDemo){
   document.getElementById('adminPanel').style.display = 'block';
+  document.getElementById('hostelSummaryPanel').style.display = 'block';
   ['downloadCsvBtn', 'importNewBtn', 'importVerifyBtn'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = 'block';
@@ -438,12 +465,89 @@ function renderStats(){
   const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const verifiedToday = hostel.filter(s => s.status === 'done' && s.verifiedAt && s.verifiedAt.indexOf(todayStr) === 0).length;
   document.getElementById('verifiedTodayCount').textContent = verifiedToday;
+
+  if(isAdminOrDemo) renderHostelSummary();
 }
 
+let hostelSummaryChartInstance = null;
+function getHostelSummaryRows(){
+  const byHostel = {};
+  hostel.forEach(s => {
+    const key = s.hostelName || '(No Hostel Assigned)';
+    if(!byHostel[key]) byHostel[key] = { done: 0, pending: 0 };
+    if(s.status === 'done') byHostel[key].done++; else byHostel[key].pending++;
+  });
+  return Object.keys(byHostel).sort().map(name => ({
+    name, done: byHostel[name].done, pending: byHostel[name].pending, total: byHostel[name].done + byHostel[name].pending
+  }));
+}
+
+function renderHostelSummary(){
+  const rows = getHostelSummaryRows();
+  const tbody = document.getElementById('summaryTableBody');
+  if(!rows.length){
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:16px; color:var(--color-text-muted);">No data yet.</td></tr>';
+  } else {
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td>${escapeHtml(r.name)}</td>
+        <td><span class="status-pill done">${r.done}</span></td>
+        <td><span class="status-pill pending">${r.pending}</span></td>
+        <td>${r.total}</td>
+      </tr>
+    `).join('');
+  }
+
+  const canvas = document.getElementById('summaryChart');
+  if(!canvas || typeof Chart === 'undefined') return;
+  if(hostelSummaryChartInstance){ hostelSummaryChartInstance.destroy(); hostelSummaryChartInstance = null; }
+  if(!rows.length) return;
+  hostelSummaryChartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => r.name),
+      datasets: [
+        { label: 'Verified', data: rows.map(r => r.done), backgroundColor: '#1F8A56' },
+        { label: 'Pending', data: rows.map(r => r.pending), backgroundColor: '#C4432B' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } },
+      plugins: { legend: { position: 'top' } }
+    }
+  });
+}
+
+document.getElementById('downloadSummaryBtn')?.addEventListener('click', () => {
+  const rows = getHostelSummaryRows();
+  const headers = ['Hostel Name', 'Verified', 'Pending', 'Total'];
+  const csvEscape = v => { const s = String(v ?? ''); return (s.includes(',')||s.includes('"')) ? '"' + s.replace(/"/g,'""') + '"' : s; };
+  const lines = [headers.map(csvEscape).join(',')].concat(rows.map(r => [r.name, r.done, r.pending, r.total].map(csvEscape).join(',')));
+  const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `hostel_summary_${Date.now()}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  showToast('Summary downloaded.', 'success');
+});
+
+let currentTableFilter = 'all';
 function renderTable(){
   const tbody = document.getElementById('tableBody');
-  if(!hostel.length){ tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--color-text-muted);">No hostel records yet.</td></tr>'; return; }
-  tbody.innerHTML = hostel.map(s => `
+  let rows = hostel;
+  if(currentTableFilter === 'done') rows = rows.filter(s => s.status === 'done');
+  if(currentTableFilter === 'pending') rows = rows.filter(s => s.status !== 'done');
+  const q = (document.getElementById('tableQuickFilter')?.value || '').trim().toLowerCase();
+  if(q){
+    rows = rows.filter(s =>
+      s.studentName.toLowerCase().includes(q) || s.applicationNo.toLowerCase().includes(q) ||
+      s.registrationNo.toLowerCase().includes(q) || s.hostelName.toLowerCase().includes(q)
+    );
+  }
+  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--color-text-muted);">No matching records.</td></tr>'; return; }
+  tbody.innerHTML = rows.map(s => `
     <tr data-id="${s.id}">
       <td>${escapeHtml(s.studentName)||'—'}</td>
       <td class="mono" style="font-family:var(--font-mono);">${escapeHtml(s.applicationNo)||'—'}</td>
@@ -456,6 +560,16 @@ function renderTable(){
     tr.addEventListener('click', () => selectStudent(tr.dataset.id));
   });
 }
+
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    currentTableFilter = chip.dataset.filter;
+    renderTable();
+  });
+});
+document.getElementById('tableQuickFilter')?.addEventListener('input', renderTable);
 
 const searchInput = document.getElementById('searchInput');
 const suggestions = document.getElementById('suggestions');
