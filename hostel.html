@@ -652,6 +652,29 @@ function selectStudent(id){
   renderDetail(s);
 }
 
+function showConfirmModal(message, title){
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-box">
+        <h3>${escapeHtml(title || 'Are you sure?')}</h3>
+        <div style="font-size:13.5px; color:var(--color-text); margin-bottom:18px; line-height:1.5;">${escapeHtml(message)}</div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" id="confirmNoBtn" style="flex:1;">No</button>
+          <button class="btn btn-primary" id="confirmYesBtn" style="flex:1; background:var(--color-pending);">Yes</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    const yesBtn = overlay.querySelector('#confirmYesBtn');
+    const noBtn = overlay.querySelector('#confirmNoBtn');
+    function close(result){ overlay.remove(); resolve(result); }
+    yesBtn.addEventListener('click', () => close(true));
+    noBtn.addEventListener('click', () => close(false));
+  });
+}
+
 function showUnlockModal(onSubmit, title, confirmLabel){
   title = title || 'Admin unlock'; confirmLabel = confirmLabel || 'Unlock';
   const overlay = document.createElement('div');
@@ -724,8 +747,30 @@ function renderDetail(s){
             ${isAdminOrDemo ? '<button class="btn btn-ghost" id="unlockHostelBtn" style="margin-top:10px;">Unlock (admin)</button>' : ''}
           ` : ''}
         </div>
+        ${(isAdminOrDemo && !isDemo) ? `
+          <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--color-border);">
+            <button class="btn btn-ghost" id="deleteHostelStudentBtn" style="color:var(--color-pending); border-color:var(--color-pending-soft);">Delete Student</button>
+          </div>
+        ` : ''}
       </div>
     </div>`;
+
+  if(isAdminOrDemo && !isDemo){
+    const deleteBtn = detailArea.querySelector('#deleteHostelStudentBtn');
+    if(deleteBtn){
+      deleteBtn.addEventListener('click', async () => {
+        const confirmed = await showConfirmModal(`Permanently delete ${s.studentName || 'this student'}? This removes the row from the sheet entirely and cannot be undone.`, 'Confirm Deletion');
+        if(!confirmed) return;
+        showUnlockModal(async (password) => {
+          const data = await runScript('deleteHostelStudent', s.id, password, sessionStorage.getItem(USERNAME_KEY) || 'Admin', sessionStorage.getItem(USERID_KEY));
+          if(!data.ok) throw new Error(data.error || 'Delete failed.');
+          detailArea.innerHTML = `<div class="empty-state"><div style="font-family:var(--font-display); font-size:16px; color:var(--color-navy-deep); margin-bottom:6px;">Student deleted</div><div>Search for another hosteller to view details.</div></div>`;
+          await loadHostelData();
+          showToast('Student deleted.', 'success');
+        }, 'Delete Student', 'Delete');
+      });
+    }
+  }
 
   if(locked && isAdminOrDemo){
     detailArea.querySelector('#unlockHostelBtn').addEventListener('click', () => {
