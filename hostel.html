@@ -88,6 +88,11 @@
   .toast.toast-error{ background:var(--color-pending); }
   #refreshIcon.spinning{ animation: hostelSpin 0.7s linear infinite; }
   @keyframes hostelSpin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
+  .menu-item{
+    display:flex; align-items:center; width:100%; text-align:left; padding:10px 14px; background:none;
+    border:none; cursor:pointer; font-size:13px; color:var(--color-text); border-radius:6px; font-family:var(--font-body); font-weight:500;
+  }
+  .menu-item:hover{ background:#F0F2F6; }
 </style>
 </head>
 <body>
@@ -106,7 +111,16 @@
     <span class="topbar-meta" id="lastRefreshedLabel" style="font-size:10.5px; color:#8a99b8;"></span>
     <button class="btn" id="refreshBtn" style="padding:6px 13px; font-size:12px; background:transparent; color:#fff; border:1px solid rgba(255,255,255,.25);"><span id="refreshIcon" style="display:inline-block;">⟳</span> Refresh</button>
     <a class="backLink" id="backToMainLink" href="index.html">← Back to Main App</a>
-    <span id="welcomeMsg" style="font-size:12.5px; color:#B9C2D6;"></span>
+    <div style="position:relative;">
+      <button id="welcomeMsgBtn" style="background:transparent; border:1px solid rgba(255,255,255,.25); color:#fff; border-radius:6px; padding:6px 12px; font-size:12.5px; cursor:pointer; font-family:var(--font-body); display:inline-flex; align-items:center; gap:6px;">
+        <span id="welcomeMsg"></span> <span style="font-size:9px; opacity:.8;">▾</span>
+      </button>
+      <div id="welcomeDropdown" style="display:none; position:absolute; top:calc(100% + 8px); right:0; background:#fff; border-radius:10px; box-shadow:0 14px 36px rgba(0,0,0,.28); min-width:220px; padding:6px; z-index:1000;">
+        <button class="menu-item" id="downloadCsvBtn" style="display:none;">Download Report (CSV)</button>
+        <button class="menu-item" id="importNewBtn" style="display:none;">Import New Hostel Data</button>
+        <button class="menu-item" id="importVerifyBtn" style="display:none;">Import Face Capture Updates</button>
+      </div>
+    </div>
     <button class="btn btn-ghost" id="logoutBtn" style="padding:6px 13px; font-size:12px; background:transparent; color:#fff; border-color:rgba(255,255,255,.25);">Logout</button>
   </div>
 </header>
@@ -137,14 +151,11 @@
 
       <div class="panel" id="adminPanel" style="display:none;">
         <h2>Admin</h2>
-        <div style="text-align:center; border:1px solid var(--color-border); border-radius:8px; padding:12px; margin-bottom:12px;">
+        <div style="text-align:center; border:1px solid var(--color-border); border-radius:8px; padding:12px;">
           <div style="font-size:10.5px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; margin-bottom:4px;">Fresh Data</div>
           <div style="font-family:var(--font-display); font-size:26px; font-weight:700; color:var(--color-navy);" id="hostelFreshUploadCount">0</div>
           <div style="font-size:10px; color:var(--color-text-muted); margin-top:3px;" id="hostelFreshUploadTimestamp">No imports yet</div>
         </div>
-        <button class="btn btn-ghost" style="width:100%; margin-bottom:8px;" id="downloadCsvBtn">Download Report (CSV)</button>
-        <button class="btn btn-ghost" style="width:100%; margin-bottom:8px;" id="importNewBtn">Import New Hostel Data</button>
-        <button class="btn btn-ghost" style="width:100%;" id="importVerifyBtn">Import Face Capture Updates</button>
       </div>
     </div>
 
@@ -192,7 +203,13 @@ if(!perms.hostelAccess){
 
 document.getElementById('welcomeMsg').textContent = 'Welcome, ' + (sessionStorage.getItem(USERNAME_KEY) || 'User');
 const isAdminOrDemo = sessionStorage.getItem(ADMIN_KEY) === 'yes';
-if(isAdminOrDemo) document.getElementById('adminPanel').style.display = 'block';
+if(isAdminOrDemo){
+  document.getElementById('adminPanel').style.display = 'block';
+  ['downloadCsvBtn', 'importNewBtn', 'importVerifyBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = 'block';
+  });
+}
 const isDemo = sessionStorage.getItem(DEMO_KEY) === 'yes';
 const isHostellerOnly = sessionStorage.getItem(HOSTELLER_ONLY_KEY) === 'yes';
 if(isHostellerOnly){
@@ -209,6 +226,16 @@ if(isAdminOrDemo){
     verifiedTodayCount.addEventListener('click', downloadVerifiedTodayCsv);
   }
   if(verifiedTodayHint) verifiedTodayHint.style.display = 'block';
+}
+
+const welcomeMsgBtn = document.getElementById('welcomeMsgBtn');
+const welcomeDropdown = document.getElementById('welcomeDropdown');
+if(welcomeMsgBtn && welcomeDropdown){
+  welcomeMsgBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    welcomeDropdown.style.display = welcomeDropdown.style.display === 'block' ? 'none' : 'block';
+  });
+  document.addEventListener('click', () => { welcomeDropdown.style.display = 'none'; });
 }
 
 document.getElementById('logoutBtn').addEventListener('click', () => {
