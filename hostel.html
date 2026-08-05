@@ -102,7 +102,9 @@
     </div>
   </div>
   <div style="display:flex; align-items:center; gap:16px;">
-    <button class="btn btn-ghost" id="refreshBtn" style="padding:6px 13px; font-size:12px;"><span id="refreshIcon" style="display:inline-block;">⟳</span> Refresh</button>
+    <span class="topbar-meta" id="topbarMeta" style="font-size:12px; color:#B9C2D6;">Loading…</span>
+    <span class="topbar-meta" id="lastRefreshedLabel" style="font-size:10.5px; color:#8a99b8;"></span>
+    <button class="btn" id="refreshBtn" style="padding:6px 13px; font-size:12px; background:transparent; color:#fff; border:1px solid rgba(255,255,255,.25);"><span id="refreshIcon" style="display:inline-block;">⟳</span> Refresh</button>
     <a class="backLink" id="backToMainLink" href="index.html">← Back to Main App</a>
     <span id="welcomeMsg" style="font-size:12.5px; color:#B9C2D6;"></span>
     <button class="btn btn-ghost" id="logoutBtn" style="padding:6px 13px; font-size:12px; background:transparent; color:#fff; border-color:rgba(255,255,255,.25);">Logout</button>
@@ -246,6 +248,20 @@ function initials(name){
 }
 
 let hostel = [];
+let lastRefreshTime = null;
+
+function updateLastRefreshedLabel(){
+  const el = document.getElementById('lastRefreshedLabel');
+  if(!el || !lastRefreshTime) return;
+  const seconds = Math.floor((Date.now() - lastRefreshTime) / 1000);
+  let text;
+  if(seconds < 5) text = 'Updated just now';
+  else if(seconds < 60) text = `Updated ${seconds}s ago`;
+  else if(seconds < 3600) text = `Updated ${Math.floor(seconds / 60)}m ago`;
+  else text = `Updated ${Math.floor(seconds / 3600)}h ago`;
+  el.textContent = text;
+}
+setInterval(updateLastRefreshedLabel, 5000);
 
 async function loadHostelData(){
   const refreshIcon = document.getElementById('refreshIcon');
@@ -254,6 +270,9 @@ async function loadHostelData(){
     const data = await runScript('getHostelData');
     if(!data.ok){ showToast(data.error || 'Could not load hostel data.', 'error'); return; }
     hostel = data.students;
+    document.getElementById('topbarMeta').textContent = `${hostel.length} students · Hostel Data`;
+    lastRefreshTime = Date.now();
+    updateLastRefreshedLabel();
     renderStats();
     renderTable();
   }catch(err){
