@@ -3267,7 +3267,7 @@ if(composeMessageBtn){
 
 const hostelLookupBtn = document.getElementById('hostelLookupBtn');
 if(hostelLookupBtn){
-  hostelLookupBtn.addEventListener('click', showHostelLookupModal);
+  hostelLookupBtn.addEventListener('click', () => { window.location.href = 'hostel.html'; });
 }
 
 // --- Admin: view the activity log ---
