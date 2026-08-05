@@ -25,7 +25,7 @@
     --color-pending:#e0654a; --color-pending-soft:#2e1712;
     --color-border:#30363d; --color-text:#e6edf3; --color-text-muted:#8b949e;
   }
-  body.focus-mode #adminPanel, body.focus-mode #verifiedTodayPanel{
+  body.focus-mode #statsRowPanel, body.focus-mode #hostelSummaryPanel{
     display:none !important;
   }
   *{box-sizing:border-box;}
@@ -158,20 +158,18 @@
         </div>
       </div>
 
-      <div class="panel" id="verifiedTodayPanel">
-        <h2>Verified Today</h2>
-        <div style="text-align:center;">
-          <div style="font-family:var(--font-display); font-size:32px; font-weight:700; color:var(--color-success);" id="verifiedTodayCount">0</div>
-          <div id="verifiedTodayHint" style="font-size:10.5px; color:var(--color-text-muted); margin-top:4px; display:none;">Click to download</div>
-        </div>
-      </div>
-
-      <div class="panel" id="adminPanel" style="display:none;">
-        <h2>Admin</h2>
-        <div style="text-align:center; border:1px solid var(--color-border); border-radius:8px; padding:12px;">
-          <div style="font-size:10.5px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; margin-bottom:4px;">Fresh Data</div>
-          <div style="font-family:var(--font-display); font-size:26px; font-weight:700; color:var(--color-navy);" id="hostelFreshUploadCount">0</div>
-          <div style="font-size:10px; color:var(--color-text-muted); margin-top:3px;" id="hostelFreshUploadTimestamp">No imports yet</div>
+      <div class="panel" id="statsRowPanel">
+        <div id="todayStatsGrid" style="display:grid; grid-template-columns:1fr; gap:12px; text-align:center;">
+          <div>
+            <div style="font-size:11px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;">Verified Today</div>
+            <div style="font-family:var(--font-display); font-size:32px; font-weight:700; color:var(--color-success);" id="verifiedTodayCount">0</div>
+            <div id="verifiedTodayHint" style="font-size:10.5px; color:var(--color-text-muted); margin-top:4px; display:none;">Click to download</div>
+          </div>
+          <div id="freshDataColumn" style="display:none; border-left:1px solid var(--color-border);">
+            <div style="font-size:11px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;">Fresh Data</div>
+            <div style="font-family:var(--font-display); font-size:32px; font-weight:700; color:var(--color-navy);" id="hostelFreshUploadCount">0</div>
+            <div style="font-size:10px; color:var(--color-text-muted); margin-top:3px;" id="hostelFreshUploadTimestamp">No imports yet</div>
+          </div>
         </div>
       </div>
     </div>
@@ -245,7 +243,8 @@ if(!perms.hostelAccess){
 document.getElementById('welcomeMsg').textContent = 'Welcome, ' + (sessionStorage.getItem(USERNAME_KEY) || 'User');
 const isAdminOrDemo = sessionStorage.getItem(ADMIN_KEY) === 'yes';
 if(isAdminOrDemo){
-  document.getElementById('adminPanel').style.display = 'block';
+  document.getElementById('todayStatsGrid').style.gridTemplateColumns = '1fr 1fr';
+  document.getElementById('freshDataColumn').style.display = 'block';
   document.getElementById('hostelSummaryPanel').style.display = 'block';
   ['downloadCsvBtn', 'importNewBtn', 'importVerifyBtn'].forEach(id => {
     const el = document.getElementById(id);
