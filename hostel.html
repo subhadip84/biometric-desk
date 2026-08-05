@@ -16,6 +16,17 @@
     --color-border:#E1E5EC; --color-text:#1D2430; --color-text-muted:#657085;
     --font-display:'Lora', Georgia, serif; --font-body:'Inter', -apple-system, sans-serif; --font-mono:'IBM Plex Mono', monospace;
   }
+  html[data-theme="dark"]{
+    --color-bg:#0d1117; --color-surface:#161b22;
+    --color-navy:#2d4166; --color-navy-deep:#0a1120;
+    --color-gold:#d4af37; --color-gold-soft:#3a3320;
+    --color-success:#3fb877; --color-success-soft:#122a1d;
+    --color-pending:#e0654a; --color-pending-soft:#2e1712;
+    --color-border:#30363d; --color-text:#e6edf3; --color-text-muted:#8b949e;
+  }
+  body.focus-mode #adminPanel, body.focus-mode #verifiedTodayPanel{
+    display:none !important;
+  }
   *{box-sizing:border-box;}
   body{ margin:0; background:var(--color-bg); color:var(--color-text); font-family:var(--font-body); -webkit-font-smoothing:antialiased; }
   header.topbar{
@@ -109,6 +120,8 @@
   <div style="display:flex; align-items:center; gap:16px;">
     <span class="topbar-meta" id="topbarMeta" style="font-size:12px; color:#B9C2D6;">Loading…</span>
     <span class="topbar-meta" id="lastRefreshedLabel" style="font-size:10.5px; color:#8a99b8;"></span>
+    <button class="btn" id="focusModeBtn" title="Hide side panels for a focused view" style="padding:6px 13px; font-size:12px; background:transparent; color:#fff; border:1px solid rgba(255,255,255,.25);">◱ Focus</button>
+    <button class="btn" id="darkModeBtn" title="Toggle dark mode" style="padding:6px 13px; font-size:12px; background:transparent; color:#fff; border:1px solid rgba(255,255,255,.25);">🌙</button>
     <button class="btn" id="refreshBtn" style="padding:6px 13px; font-size:12px; background:transparent; color:#fff; border:1px solid rgba(255,255,255,.25);"><span id="refreshIcon" style="display:inline-block;">⟳</span> Refresh</button>
     <a class="backLink" id="backToMainLink" href="index.html">← Back to Main App</a>
     <div style="position:relative;">
@@ -143,7 +156,7 @@
         </div>
       </div>
 
-      <div class="panel">
+      <div class="panel" id="verifiedTodayPanel">
         <h2>Verified Today</h2>
         <div style="text-align:center;">
           <div style="font-family:var(--font-display); font-size:32px; font-weight:700; color:var(--color-success);" id="verifiedTodayCount">0</div>
@@ -228,6 +241,32 @@ if(isAdminOrDemo){
     verifiedTodayCount.addEventListener('click', downloadVerifiedTodayCsv);
   }
   if(verifiedTodayHint) verifiedTodayHint.style.display = 'block';
+}
+
+// --- Dark mode (shares the same preference as the main app) ---
+const darkModeBtn = document.getElementById('darkModeBtn');
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  if(darkModeBtn) darkModeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+  localStorage.setItem('bioDeskTheme', theme);
+}
+applyTheme(localStorage.getItem('bioDeskTheme') || 'light');
+if(darkModeBtn){
+  darkModeBtn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    applyTheme(current === 'dark' ? 'light' : 'dark');
+  });
+}
+
+// --- Focus mode ---
+const focusModeBtn = document.getElementById('focusModeBtn');
+let focusModeOn = false;
+if(focusModeBtn){
+  focusModeBtn.addEventListener('click', () => {
+    focusModeOn = !focusModeOn;
+    document.body.classList.toggle('focus-mode', focusModeOn);
+    focusModeBtn.textContent = focusModeOn ? '◱ Exit Focus' : '◱ Focus';
+  });
 }
 
 const welcomeMsgBtn = document.getElementById('welcomeMsgBtn');
