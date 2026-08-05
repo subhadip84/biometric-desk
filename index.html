@@ -387,6 +387,7 @@
         <button class="menu-item" id="resetUserPasswordBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>Reset User Password</button>
         <button class="menu-item" id="manageUsersBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M15.5 14c2.6.3 4.5 2.4 4.5 5"/></svg>Manage Users</button>
         <button class="menu-item" id="composeMessageBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v13H7l-3 3z"/></svg>Compose Message</button>
+        <button class="menu-item" id="hostelLookupBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg>Hostel Lookup</button>
         <button class="menu-item" id="activityLogBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Activity Log</button>
         <button class="menu-item" id="helpStatsBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10m6 10V4m6 16v-7"/></svg>Help Question Stats</button>
         <button class="menu-item" id="importStudentsBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg>Import New Students</button>
@@ -1906,6 +1907,8 @@ function enterApp(){
   if(manageUsersBtn) manageUsersBtn.style.display = perms.manageUsers ? 'block' : 'none';
   const composeMessageBtn = document.getElementById('composeMessageBtn');
   if(composeMessageBtn) composeMessageBtn.style.display = perms.composeMessage ? 'block' : 'none';
+  const hostelLookupBtn = document.getElementById('hostelLookupBtn');
+  if(hostelLookupBtn) hostelLookupBtn.style.display = perms.hostelAccess ? 'block' : 'none';
   const activityLogBtn = document.getElementById('activityLogBtn');
   if(activityLogBtn) activityLogBtn.style.display = perms.viewActivityLog ? 'block' : 'none';
   const demoInfoBtn = document.getElementById('demoInfoBtn');
@@ -2576,6 +2579,7 @@ const PERMISSION_CHECKBOX_HTML = `
     <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; padding:4px 0;"><input type="checkbox" class="permCheckbox" value="resetPasswords" checked> Reset User Passwords</label>
     <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; padding:4px 0;"><input type="checkbox" class="permCheckbox" value="manageUsers" checked> Manage Users</label>
     <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; padding:4px 0;"><input type="checkbox" class="permCheckbox" value="deleteStudent" checked> Delete Student</label>
+    <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; padding:4px 0;"><input type="checkbox" class="permCheckbox" value="hostelAccess" checked> Hostel Data Access</label>
   </div>
 `;
 
@@ -2980,6 +2984,96 @@ if(welcomeMsgBtn && userMenuDropdown){
 }
 
 // --- Admin: compose / edit / delete the broadcast announcement ---
+function showHostelLookupModal(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:480px;">
+      <h3>Hostel Lookup</h3>
+      <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:10px;">Type an Application No, Registration No, or Machine Code to see hostel details instantly.</div>
+      <input type="text" id="hostelSearchInput" placeholder="Search App No / Reg No / Machine Code…" autocomplete="off" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--color-border); font-size:13.5px; font-family:var(--font-body); box-sizing:border-box;">
+      <div id="hostelResultsArea" style="margin-top:14px; max-height:360px; overflow-y:auto;">
+        <div class="skeleton-line" style="width:70%;"></div>
+        <div class="skeleton-line" style="width:45%;"></div>
+      </div>
+      <button class="btn btn-ghost btn-block" id="hostelCloseBtn" style="margin-top:12px;">Close</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const searchInput = overlay.querySelector('#hostelSearchInput');
+  const resultsArea = overlay.querySelector('#hostelResultsArea');
+  const closeBtn = overlay.querySelector('#hostelCloseBtn');
+
+  let hostelStudents = [];
+
+  function renderHostelResult(s){
+    resultsArea.innerHTML = `
+      <div style="border:1px solid var(--color-border); border-radius:10px; padding:14px;">
+        <div style="font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--color-navy-deep); margin-bottom:10px;">${escapeHtml(s.studentName) || '—'}</div>
+        <div class="detail-grid">
+          <div class="detail-item"><div class="lab">Application No</div><div class="val">${escapeHtml(s.applicationNo)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Registration No</div><div class="val">${escapeHtml(s.registrationNo)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Machine Code</div><div class="val">${escapeHtml(s.machineCode)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Site Code</div><div class="val">${escapeHtml(s.siteCode)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Course</div><div class="val">${escapeHtml(s.course)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Admission Type</div><div class="val">${escapeHtml(s.admissionType)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Gender</div><div class="val">${escapeHtml(s.gender)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Hostel Name</div><div class="val">${escapeHtml(s.hostelName)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Room No</div><div class="val">${escapeHtml(s.roomNo)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Food Coupon</div><div class="val">${escapeHtml(s.foodCoupon)||'—'}</div></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderHostelSuggestions(matches){
+    if(!matches.length){
+      resultsArea.innerHTML = `<div class="search-hint">No matching hostel record found.</div>`;
+      return;
+    }
+    if(matches.length === 1){ renderHostelResult(matches[0]); return; }
+    resultsArea.innerHTML = matches.slice(0, 10).map((s, i) => `
+      <div class="sugg-item" data-idx="${i}" style="margin-bottom:6px;">
+        <div><div class="nm">${escapeHtml(s.studentName)||'(no name)'}</div><div class="idc">${escapeHtml(s.applicationNo)} · ${escapeHtml(s.registrationNo)}</div></div>
+        <span style="font-size:11px; color:var(--color-text-muted);">${escapeHtml(s.hostelName)}</span>
+      </div>
+    `).join('');
+    resultsArea.querySelectorAll('.sugg-item').forEach(el => {
+      el.addEventListener('click', () => renderHostelResult(matches[Number(el.dataset.idx)]));
+    });
+  }
+
+  runScript('getHostelData').then(data => {
+    if(!data.ok){
+      resultsArea.innerHTML = `<div class="search-hint">${escapeHtml(data.error || 'Could not load hostel data.')}</div>`;
+      return;
+    }
+    hostelStudents = data.students;
+    resultsArea.innerHTML = `<div class="search-hint">${hostelStudents.length} hostel record(s) loaded. Start typing above to search.</div>`;
+  }).catch(err => {
+    resultsArea.innerHTML = `<div class="search-hint">Could not load hostel data — ${escapeHtml(err.message)}</div>`;
+  });
+
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    if(!q){
+      resultsArea.innerHTML = `<div class="search-hint">${hostelStudents.length} hostel record(s) loaded. Start typing above to search.</div>`;
+      return;
+    }
+    const matches = hostelStudents.filter(s =>
+      s.applicationNo.toLowerCase().includes(q) ||
+      s.registrationNo.toLowerCase().includes(q) ||
+      s.machineCode.toLowerCase().includes(q) ||
+      s.studentName.toLowerCase().includes(q)
+    );
+    renderHostelSuggestions(matches);
+  });
+
+  closeBtn.addEventListener('click', () => overlay.remove());
+  searchInput.focus();
+}
+
 function showComposeMessageModal(){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -3153,6 +3247,11 @@ function showComposeMessageModal(){
 const composeMessageBtn = document.getElementById('composeMessageBtn');
 if(composeMessageBtn){
   composeMessageBtn.addEventListener('click', showComposeMessageModal);
+}
+
+const hostelLookupBtn = document.getElementById('hostelLookupBtn');
+if(hostelLookupBtn){
+  hostelLookupBtn.addEventListener('click', showHostelLookupModal);
 }
 
 // --- Admin: view the activity log ---
