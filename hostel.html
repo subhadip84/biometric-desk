@@ -131,8 +131,8 @@
         <h2>Verified Today</h2>
         <div style="text-align:center;">
           <div style="font-family:var(--font-display); font-size:32px; font-weight:700; color:var(--color-success);" id="verifiedTodayCount">0</div>
+          <div id="verifiedTodayHint" style="font-size:10.5px; color:var(--color-text-muted); margin-top:4px; display:none;">Click to download</div>
         </div>
-        <button class="btn btn-ghost" style="width:100%; margin-top:12px; display:none;" id="downloadTodayBtn">Download Today's List (CSV)</button>
       </div>
 
       <div class="panel" id="adminPanel" style="display:none;">
@@ -200,8 +200,15 @@ if(isHostellerOnly){
   if(backLink) backLink.style.display = 'none';
 }
 if(isAdminOrDemo){
-  const downloadTodayBtn = document.getElementById('downloadTodayBtn');
-  if(downloadTodayBtn) downloadTodayBtn.style.display = 'block';
+  const verifiedTodayCount = document.getElementById('verifiedTodayCount');
+  const verifiedTodayHint = document.getElementById('verifiedTodayHint');
+  if(verifiedTodayCount){
+    verifiedTodayCount.style.cursor = 'pointer';
+    verifiedTodayCount.style.textDecoration = 'underline dotted';
+    verifiedTodayCount.style.textUnderlineOffset = '5px';
+    verifiedTodayCount.addEventListener('click', downloadVerifiedTodayCsv);
+  }
+  if(verifiedTodayHint) verifiedTodayHint.style.display = 'block';
 }
 
 document.getElementById('logoutBtn').addEventListener('click', () => {
@@ -467,29 +474,59 @@ function renderDetail(s){
 }
 
 // --- Admin: CSV download ---
-document.getElementById('downloadCsvBtn')?.addEventListener('click', async () => {
-  const btn = document.getElementById('downloadCsvBtn');
-  btn.disabled = true; btn.textContent = 'Preparing…';
-  try{
-    const data = await runScript('exportHostelAsCsv', 'all');
-    if(!data.ok) throw new Error(data.error || 'Export failed.');
-    const blob = new Blob([data.csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = data.filename || 'hostel_report.csv';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
-    showToast(`Downloaded ${data.rowCount} row(s).`, 'success');
-  }catch(err){
-    showToast(err.message, 'error');
-  }finally{
-    btn.disabled = false; btn.textContent = 'Download Report (CSV)';
-  }
-});
+function showHostelCsvFilterModal(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:340px;">
+      <h3>Download Report (CSV)</h3>
+      <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px;">Status</div>
+      <select id="hCsvStatus" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13.5px; font-family:var(--font-body); margin-bottom:12px;">
+        <option value="all">All students</option>
+        <option value="done">Verified only</option>
+        <option value="pending">Non-verified only</option>
+      </select>
+      <div class="modal-error" id="hCsvErr"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="hCsvCancel">Cancel</button>
+        <button class="btn btn-primary" id="hCsvDownload">Download</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
 
-document.getElementById('downloadTodayBtn')?.addEventListener('click', async () => {
-  const btn = document.getElementById('downloadTodayBtn');
-  btn.disabled = true; btn.textContent = 'Preparing…';
+  const statusSelect = overlay.querySelector('#hCsvStatus');
+  const errEl = overlay.querySelector('#hCsvErr');
+  const downloadBtn = overlay.querySelector('#hCsvDownload');
+  function close(){ overlay.remove(); }
+
+  downloadBtn.addEventListener('click', async () => {
+    errEl.textContent = '';
+    downloadBtn.disabled = true; downloadBtn.textContent = 'Preparing…';
+    try{
+      const data = await runScript('exportHostelAsCsv', statusSelect.value);
+      if(!data.ok) throw new Error(data.error || 'Export failed.');
+      const blob = new Blob([data.csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = data.filename || 'hostel_report.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      close();
+      showToast(`Downloaded ${data.rowCount} row(s).`, 'success');
+    }catch(err){
+      errEl.textContent = err.message;
+      downloadBtn.disabled = false; downloadBtn.textContent = 'Download';
+    }
+  });
+  overlay.querySelector('#hCsvCancel').addEventListener('click', close);
+}
+
+document.getElementById('downloadCsvBtn')?.addEventListener('click', showHostelCsvFilterModal);
+
+async function downloadVerifiedTodayCsv(){
+  const countEl = document.getElementById('verifiedTodayCount');
+  const originalText = countEl.textContent;
+  countEl.style.opacity = '.5';
   try{
     const data = await runScript('exportHostelVerifiedTodayAsCsv');
     if(!data.ok) throw new Error(data.error || 'Export failed.');
@@ -503,9 +540,10 @@ document.getElementById('downloadTodayBtn')?.addEventListener('click', async () 
   }catch(err){
     showToast(err.message, 'error');
   }finally{
-    btn.disabled = false; btn.textContent = "Download Today's List (CSV)";
+    countEl.style.opacity = '1';
+    countEl.textContent = originalText;
   }
-});
+}
 
 // --- Admin: bulk import modals (shared logic for both New Data and Verification Updates) ---
 function showHostelImportModal(kind){
