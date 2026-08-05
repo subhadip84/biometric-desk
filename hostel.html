@@ -102,6 +102,7 @@
   <div style="display:flex; align-items:center; gap:16px;">
     <a class="backLink" id="backToMainLink" href="index.html">← Back to Main App</a>
     <span id="welcomeMsg" style="font-size:12.5px; color:#B9C2D6;"></span>
+    <button class="btn btn-ghost" id="logoutBtn" style="padding:6px 13px; font-size:12px; background:transparent; color:#fff; border-color:rgba(255,255,255,.25);">Logout</button>
   </div>
 </header>
 
@@ -131,6 +132,11 @@
 
       <div class="panel" id="adminPanel" style="display:none;">
         <h2>Admin</h2>
+        <div style="text-align:center; border:1px solid var(--color-border); border-radius:8px; padding:12px; margin-bottom:12px;">
+          <div style="font-size:10.5px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; margin-bottom:4px;">Fresh Data</div>
+          <div style="font-family:var(--font-display); font-size:26px; font-weight:700; color:var(--color-navy);" id="hostelFreshUploadCount">0</div>
+          <div style="font-size:10px; color:var(--color-text-muted); margin-top:3px;" id="hostelFreshUploadTimestamp">No imports yet</div>
+        </div>
         <button class="btn btn-ghost" style="width:100%; margin-bottom:8px;" id="downloadCsvBtn">Download Report (CSV)</button>
         <button class="btn btn-ghost" style="width:100%; margin-bottom:8px;" id="importNewBtn">Import New Hostel Data</button>
         <button class="btn btn-ghost" style="width:100%;" id="importVerifyBtn">Import Face Capture Updates</button>
@@ -193,6 +199,18 @@ if(isAdminOrDemo){
   if(downloadTodayBtn) downloadTodayBtn.style.display = 'block';
 }
 
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  sessionStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(ADMIN_KEY);
+  sessionStorage.removeItem(DEMO_KEY);
+  sessionStorage.removeItem(HOSTELLER_ONLY_KEY);
+  sessionStorage.removeItem(USERID_KEY);
+  sessionStorage.removeItem(USERNAME_KEY);
+  sessionStorage.removeItem(PERMISSIONS_KEY);
+  sessionStorage.removeItem('bioDeskLoginTime');
+  window.location.href = 'index.html';
+});
+
 function runScript(fnName, ...args){
   return fetch(API_BASE_URL, {
     method: 'POST',
@@ -236,6 +254,16 @@ async function loadHostelData(){
   }catch(err){
     showToast(err.message, 'error');
   }
+}
+
+async function loadFreshUploadInfo(){
+  if(!isAdminOrDemo) return;
+  try{
+    const data = await runScript('getLastHostelImportInfo');
+    if(!data.ok) return;
+    document.getElementById('hostelFreshUploadCount').textContent = data.count;
+    document.getElementById('hostelFreshUploadTimestamp').textContent = data.timestamp ? `Last updated: ${data.timestamp}` : 'No imports yet';
+  }catch(err){ /* non-critical widget - fail silently */ }
 }
 
 function renderStats(){
@@ -519,6 +547,7 @@ function showHostelImportModal(kind){
       if(!data.ok) throw new Error(data.error || 'Import failed.');
       close();
       await loadHostelData();
+      await loadFreshUploadInfo();
       if(isNew){
         showToast(`${data.added} added, ${data.skippedRows.length} skipped as duplicates.`, 'success');
       } else {
@@ -537,6 +566,7 @@ document.getElementById('importNewBtn')?.addEventListener('click', () => showHos
 document.getElementById('importVerifyBtn')?.addEventListener('click', () => showHostelImportModal('verify'));
 
 loadHostelData();
+loadFreshUploadInfo();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
