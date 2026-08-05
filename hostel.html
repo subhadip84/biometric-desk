@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hostel Face Capture Desk — Adamas University</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --color-bg:#F5F6F9; --color-surface:#FFFFFF;
+    --color-navy:#1B2A4A; --color-navy-deep:#12203A;
+    --color-gold:#C9A227; --color-gold-soft:#F1E4B8;
+    --color-success:#1F8A56; --color-success-soft:#E4F3EC;
+    --color-pending:#C4432B; --color-pending-soft:#FBEAE6;
+    --color-border:#E1E5EC; --color-text:#1D2430; --color-text-muted:#657085;
+    --font-display:'Lora', Georgia, serif; --font-body:'Inter', -apple-system, sans-serif; --font-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--color-bg); color:var(--color-text); font-family:var(--font-body); -webkit-font-smoothing:antialiased; }
+  header.topbar{
+    background:rgba(18,32,58,.92); color:#fff; padding:16px 28px; display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:800; gap:16px; flex-wrap:wrap;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-text .title{ font-family:var(--font-display); font-size:18px; font-weight:600; }
+  .brand-text .sub{ font-size:11px; color:#B9C2D6; text-transform:uppercase; letter-spacing:.4px; }
+  .backLink{ color:#B9C2D6; text-decoration:none; font-size:12.5px; display:flex; align-items:center; gap:6px; }
+  .backLink:hover{ color:#fff; }
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:9px 15px; border-radius:7px; border:1px solid transparent; font-weight:600; font-size:13px; cursor:pointer; font-family:var(--font-body); }
+  .btn-primary{ background:var(--color-navy); color:#fff; }
+  .btn-primary:hover{ background:var(--color-navy-deep); }
+  .btn-ghost{ background:transparent; color:var(--color-navy); border-color:var(--color-border); }
+  .btn-ghost:hover{ background:#F0F2F6; }
+  .btn:disabled{ opacity:.6; cursor:not-allowed; }
+  main{ max-width:1100px; margin:0 auto; padding:24px 20px 60px; }
+  .layout{ display:grid; grid-template-columns:320px 1fr; gap:20px; align-items:start; }
+  @media (max-width:860px){ .layout{ grid-template-columns:1fr; } }
+  .panel{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:10px; padding:18px; }
+  .panel + .panel{ margin-top:16px; }
+  .panel h2{ font-family:var(--font-display); font-size:15px; margin:0 0 12px; color:var(--color-navy-deep); }
+  .search-box{ position:relative; }
+  .search-box input{ width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-mono); }
+  .stat-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:14px; }
+  .stat{ border:1px solid var(--color-border); border-radius:8px; padding:9px; text-align:center; }
+  .stat .n{ font-family:var(--font-display); font-size:19px; font-weight:700; color:var(--color-navy-deep); }
+  .stat .l{ font-size:9.5px; color:var(--color-text-muted); text-transform:uppercase; }
+  .stat.done .n{ color:var(--color-success); }
+  .stat.pending .n{ color:var(--color-pending); }
+  .sugg-item{ border:1px solid var(--color-border); border-radius:7px; padding:8px 10px; cursor:pointer; margin-top:6px; display:flex; justify-content:space-between; align-items:center; }
+  .sugg-item:hover{ border-color:var(--color-navy); background:#F7F9FC; }
+  .verify-card{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:12px; overflow:hidden; }
+  .vc-head{ background:var(--color-navy); color:#fff; padding:16px 20px; display:flex; align-items:center; gap:16px; }
+  .seal{ width:54px; height:54px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; border:2.5px dashed rgba(255,255,255,.55); font-family:var(--font-display); font-weight:700; font-size:18px; }
+  .seal.is-done{ border:2.5px solid var(--color-gold); background:rgba(201,162,39,.18); }
+  .vc-head-text .name{ font-family:var(--font-display); font-size:18px; font-weight:600; }
+  .vc-head-text .status-line{ font-size:12px; color:#C7D0E3; margin-top:2px; }
+  .vc-body{ padding:20px; }
+  .detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; }
+  @media (max-width:520px){ .detail-grid{ grid-template-columns:1fr; } }
+  .detail-item .lab{ font-size:10.5px; text-transform:uppercase; color:var(--color-text-muted); }
+  .detail-item .val{ font-family:var(--font-mono); font-size:14px; font-weight:600; margin-top:2px; }
+  .verify-controls{ margin-top:20px; padding-top:18px; border-top:1px solid var(--color-border); }
+  .radio-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .radio-opt{ flex:1; min-width:140px; display:flex; align-items:center; gap:8px; border:1.5px solid var(--color-border); border-radius:8px; padding:11px 13px; cursor:pointer; }
+  .radio-opt.done-opt.active{ border-color:var(--color-success); background:var(--color-success-soft); }
+  .radio-opt.pending-opt.active{ border-color:var(--color-pending); background:var(--color-pending-soft); }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  thead th{ text-align:left; font-size:10px; text-transform:uppercase; color:var(--color-text-muted); border-bottom:1.5px solid var(--color-border); padding:8px; }
+  tbody td{ padding:9px 8px; border-bottom:1px solid var(--color-border); }
+  tbody tr{ cursor:pointer; }
+  tbody tr:hover{ background:#F7F9FC; }
+  .status-pill{ font-size:10.5px; padding:2px 9px; border-radius:20px; font-weight:600; }
+  .status-pill.done{ background:var(--color-success-soft); color:var(--color-success); }
+  .status-pill.pending{ background:var(--color-pending-soft); color:var(--color-pending); }
+  .empty-state{ text-align:center; padding:50px 20px; color:var(--color-text-muted); }
+  .modal-overlay{ position:fixed; inset:0; background:rgba(18,32,58,.45); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; }
+  .modal-box{ background:#fff; border-radius:12px; padding:22px; max-width:340px; width:100%; max-height:88vh; overflow-y:auto; }
+  .modal-box h3{ font-family:var(--font-display); font-size:16px; margin:0 0 14px; }
+  .modal-box input[type="password"], .modal-box input[type="text"], .modal-box select{ width:100%; padding:10px 13px; border-radius:8px; border:1px solid var(--color-border); font-size:13.5px; margin-bottom:9px; font-family:var(--font-body); }
+  .modal-actions{ display:flex; gap:8px; margin-top:6px; }
+  .modal-actions .btn{ flex:1; }
+  .modal-error{ font-size:12px; color:var(--color-pending); margin:-4px 0 8px; min-height:14px; }
+  #toastContainer{ position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:1200; }
+  .toast{ background:var(--color-navy-deep); color:#fff; padding:10px 18px; border-radius:22px; font-size:12.5px; opacity:0; transform:translateY(10px); transition:opacity .2s, transform .2s; }
+  .toast.show{ opacity:1; transform:translateY(0); }
+  .toast.toast-success{ background:var(--color-success); }
+  .toast.toast-error{ background:var(--color-pending); }
+</style>
+</head>
+<body>
+
+<div id="toastContainer"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-text">
+      <div class="title">Hostel Face Capture Desk</div>
+      <div class="sub">Adamas University · AKC IT Support</div>
+    </div>
+  </div>
+  <div style="display:flex; align-items:center; gap:16px;">
+    <a class="backLink" href="index.html">← Back to Main App</a>
+    <span id="welcomeMsg" style="font-size:12.5px; color:#B9C2D6;"></span>
+  </div>
+</header>
+
+<main>
+  <div class="layout">
+    <div>
+      <div class="panel">
+        <h2>Find a hosteller</h2>
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="App No / Reg No / Machine Code / Name" autocomplete="off">
+        </div>
+        <div id="suggestions"></div>
+        <div class="stat-grid">
+          <div class="stat"><div class="n" id="statTotal">0</div><div class="l">Total</div></div>
+          <div class="stat done"><div class="n" id="statDone">0</div><div class="l">Verified</div></div>
+          <div class="stat pending"><div class="n" id="statPending">0</div><div class="l">Pending</div></div>
+        </div>
+      </div>
+
+      <div class="panel" id="adminPanel" style="display:none;">
+        <h2>Admin</h2>
+        <button class="btn btn-ghost" style="width:100%; margin-bottom:8px;" id="downloadCsvBtn">Download Report (CSV)</button>
+        <button class="btn btn-ghost" style="width:100%; margin-bottom:8px;" id="importNewBtn">Import New Hostel Data</button>
+        <button class="btn btn-ghost" style="width:100%;" id="importVerifyBtn">Import Face Capture Updates</button>
+      </div>
+    </div>
+
+    <div>
+      <div id="detailArea">
+        <div class="empty-state">
+          <div style="font-family:var(--font-display); font-size:16px; color:var(--color-navy-deep); margin-bottom:6px;">No student selected</div>
+          <div>Search for a hosteller to view and verify face capture status.</div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:20px;">
+        <h2>Full hostel roster</h2>
+        <div style="max-height:420px; overflow:auto; border:1px solid var(--color-border); border-radius:8px;">
+          <table>
+            <thead><tr><th>Name</th><th>App No</th><th>Hostel</th><th>Room</th><th>Status</th></tr></thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const SESSION_KEY = 'bioDeskLoggedIn';
+const ADMIN_KEY = 'bioDeskIsAdmin';
+const DEMO_KEY = 'bioDeskIsDemo';
+const USERID_KEY = 'bioDeskUserId';
+const USERNAME_KEY = 'bioDeskUserName';
+const PERMISSIONS_KEY = 'bioDeskPermissions';
+const API_BASE_URL = 'https://biometric-backend-ijiv.onrender.com';
+
+// Require an existing login from the main app - this page never shows its own login form.
+if(sessionStorage.getItem(SESSION_KEY) !== 'yes'){
+  window.location.href = 'index.html';
+}
+let perms = {};
+try{ perms = JSON.parse(sessionStorage.getItem(PERMISSIONS_KEY) || '{}'); }catch(e){ perms = {}; }
+if(!perms.hostelAccess){
+  alert('Your account does not have Hostel Data Access.');
+  window.location.href = 'index.html';
+}
+
+document.getElementById('welcomeMsg').textContent = 'Welcome, ' + (sessionStorage.getItem(USERNAME_KEY) || 'User');
+const isAdminOrDemo = sessionStorage.getItem(ADMIN_KEY) === 'yes';
+if(isAdminOrDemo) document.getElementById('adminPanel').style.display = 'block';
+const isDemo = sessionStorage.getItem(DEMO_KEY) === 'yes';
+
+function runScript(fnName, ...args){
+  return fetch(API_BASE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ fn: fnName, args: args })
+  })
+    .then(async response => {
+      const text = await response.text();
+      try{ return JSON.parse(text); }
+      catch(e){ throw new Error('The server is still starting up — please try again in a moment.'); }
+    })
+    .catch(err => { throw new Error(err && err.message ? err.message : 'Network error contacting the backend.'); });
+}
+
+function escapeHtml(str){
+  return String(str ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function showToast(message, type){
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast' + (type === 'error' ? ' toast-error' : type === 'success' ? ' toast-success' : '');
+  toast.textContent = message;
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 250); }, 3000);
+}
+function initials(name){
+  if(!name) return '?';
+  return name.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+}
+
+let hostel = [];
+
+async function loadHostelData(){
+  try{
+    const data = await runScript('getHostelData');
+    if(!data.ok){ showToast(data.error || 'Could not load hostel data.', 'error'); return; }
+    hostel = data.students;
+    renderStats();
+    renderTable();
+  }catch(err){
+    showToast(err.message, 'error');
+  }
+}
+
+function renderStats(){
+  const done = hostel.filter(s => s.status === 'done').length;
+  document.getElementById('statTotal').textContent = hostel.length;
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('statPending').textContent = hostel.length - done;
+}
+
+function renderTable(){
+  const tbody = document.getElementById('tableBody');
+  if(!hostel.length){ tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--color-text-muted);">No hostel records yet.</td></tr>'; return; }
+  tbody.innerHTML = hostel.map(s => `
+    <tr data-id="${s.id}">
+      <td>${escapeHtml(s.studentName)||'—'}</td>
+      <td class="mono" style="font-family:var(--font-mono);">${escapeHtml(s.applicationNo)||'—'}</td>
+      <td>${escapeHtml(s.hostelName)||'—'}</td>
+      <td>${escapeHtml(s.roomNo)||'—'}</td>
+      <td><span class="status-pill ${s.status}">${s.status==='done'?'Verified':'Pending'}</span>${s.locked?' 🔒':''}</td>
+    </tr>
+  `).join('');
+  tbody.querySelectorAll('tr').forEach(tr => {
+    tr.addEventListener('click', () => selectStudent(tr.dataset.id));
+  });
+}
+
+const searchInput = document.getElementById('searchInput');
+const suggestions = document.getElementById('suggestions');
+
+function findMatches(q){
+  q = q.trim().toLowerCase();
+  if(!q) return [];
+  return hostel.filter(s =>
+    s.studentName.toLowerCase().includes(q) || s.applicationNo.toLowerCase().includes(q) ||
+    s.registrationNo.toLowerCase().includes(q) || s.machineCode.toLowerCase().includes(q)
+  );
+}
+searchInput.addEventListener('input', () => {
+  const matches = findMatches(searchInput.value);
+  if(!searchInput.value.trim()){ suggestions.innerHTML = ''; return; }
+  if(!matches.length){ suggestions.innerHTML = '<div style="font-size:12px; color:var(--color-text-muted); margin-top:8px;">No matches.</div>'; return; }
+  suggestions.innerHTML = matches.slice(0, 10).map(s => `
+    <div class="sugg-item" data-id="${s.id}">
+      <div><div style="font-weight:600; font-size:13px;">${escapeHtml(s.studentName)||'(no name)'}</div><div style="font-family:var(--font-mono); font-size:11px; color:var(--color-text-muted);">${escapeHtml(s.applicationNo)}</div></div>
+      <span class="status-pill ${s.status}">${s.status==='done'?'Verified':'Pending'}</span>
+    </div>
+  `).join('');
+  suggestions.querySelectorAll('.sugg-item').forEach(el => {
+    el.addEventListener('click', () => selectStudent(el.dataset.id));
+  });
+});
+
+function selectStudent(id){
+  const s = hostel.find(x => x.id === id);
+  if(!s) return;
+  searchInput.value = '';
+  suggestions.innerHTML = '';
+  renderDetail(s);
+}
+
+function showUnlockModal(onSubmit, title, confirmLabel){
+  title = title || 'Admin unlock'; confirmLabel = confirmLabel || 'Unlock';
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h3>${escapeHtml(title)}</h3>
+      <input type="password" id="unlockPwd" placeholder="Admin password" autocomplete="off">
+      <div class="modal-error" id="unlockErr"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="unlockCancel">Cancel</button>
+        <button class="btn btn-primary" id="unlockOk">${escapeHtml(confirmLabel)}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const input = overlay.querySelector('#unlockPwd');
+  const errEl = overlay.querySelector('#unlockErr');
+  const okBtn = overlay.querySelector('#unlockOk');
+  input.focus();
+  function close(){ overlay.remove(); }
+  async function submit(){
+    if(!input.value){ errEl.textContent = 'Enter a password.'; return; }
+    okBtn.disabled = true; okBtn.textContent = 'Checking…';
+    try{ await onSubmit(input.value); close(); }
+    catch(err){ errEl.textContent = err.message; okBtn.disabled = false; okBtn.textContent = confirmLabel; }
+  }
+  overlay.querySelector('#unlockCancel').addEventListener('click', close);
+  okBtn.addEventListener('click', submit);
+  input.addEventListener('keydown', e => { if(e.key === 'Enter') submit(); });
+}
+
+function renderDetail(s){
+  const isDone = s.status === 'done';
+  const locked = s.locked;
+  const detailArea = document.getElementById('detailArea');
+  detailArea.innerHTML = `
+    <div class="verify-card">
+      <div class="vc-head">
+        <div class="seal ${isDone?'is-done':''}">${isDone ? '✓' : initials(s.studentName)}</div>
+        <div class="vc-head-text">
+          <div class="name">${escapeHtml(s.studentName)||'(no name)'}</div>
+          <div class="status-line">${isDone ? 'Face capture complete' : 'Awaiting face capture'}${locked ? ' · Locked' : ''}</div>
+        </div>
+      </div>
+      <div class="vc-body">
+        <div class="detail-grid">
+          <div class="detail-item"><div class="lab">Application No</div><div class="val">${escapeHtml(s.applicationNo)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Registration No</div><div class="val">${escapeHtml(s.registrationNo)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Machine Code</div><div class="val">${escapeHtml(s.machineCode)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Site Code</div><div class="val">${escapeHtml(s.siteCode)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Course</div><div class="val">${escapeHtml(s.course)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Hostel Name</div><div class="val">${escapeHtml(s.hostelName)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Room No</div><div class="val">${escapeHtml(s.roomNo)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Food Coupon</div><div class="val">${escapeHtml(s.foodCoupon)||'—'}</div></div>
+        </div>
+        <div class="verify-controls">
+          <div style="font-size:12.5px; font-weight:600; color:var(--color-text-muted); margin-bottom:10px;">Mark face capture status</div>
+          <div class="radio-row">
+            <label class="radio-opt done-opt ${isDone?'active':''}" style="${locked?'opacity:.55; cursor:not-allowed;':''}">
+              <input type="radio" name="face-status" value="done" ${isDone?'checked':''} ${locked?'disabled':''}>
+              <span>Done</span>
+            </label>
+            <label class="radio-opt pending-opt ${!isDone?'active':''}" style="${locked?'opacity:.55; cursor:not-allowed;':''}">
+              <input type="radio" name="face-status" value="pending" ${!isDone?'checked':''} ${locked?'disabled':''}>
+              <span>Not done yet</span>
+            </label>
+          </div>
+          ${locked ? `
+            <div style="font-size:12px; color:var(--color-text-muted); margin-top:10px;">This record is locked. An admin can unlock it below.</div>
+            ${isAdminOrDemo ? '<button class="btn btn-ghost" id="unlockHostelBtn" style="margin-top:10px;">Unlock (admin)</button>' : ''}
+          ` : ''}
+        </div>
+      </div>
+    </div>`;
+
+  if(locked && isAdminOrDemo){
+    detailArea.querySelector('#unlockHostelBtn').addEventListener('click', () => {
+      showUnlockModal(async (password) => {
+        const data = await runScript('adminUnlockHostel', s.id, password, sessionStorage.getItem(USERNAME_KEY) || 'Admin');
+        if(!data.ok) throw new Error(data.error || 'Unlock failed.');
+        s.locked = false;
+        renderDetail(s);
+        renderTable();
+        showToast('Unlocked.', 'success');
+      });
+    });
+  }
+
+  if(!locked){
+    detailArea.querySelectorAll('input[name="face-status"]').forEach(input => {
+      input.addEventListener('change', async (e) => {
+        try{
+          const currentUserId = sessionStorage.getItem(USERID_KEY) || 'unknown';
+          const data = await runScript('updateHostelStatus', s.id, e.target.value, currentUserId);
+          if(!data.ok) throw new Error(data.error || 'Update failed.');
+          s.status = e.target.value;
+          s.locked = true;
+          renderDetail(s);
+          renderStats();
+          renderTable();
+          showToast('Saved.', 'success');
+        }catch(err){
+          showToast(err.message, 'error');
+        }
+      });
+    });
+  }
+}
+
+// --- Admin: CSV download ---
+document.getElementById('downloadCsvBtn')?.addEventListener('click', async () => {
+  const btn = document.getElementById('downloadCsvBtn');
+  btn.disabled = true; btn.textContent = 'Preparing…';
+  try{
+    const data = await runScript('exportHostelAsCsv', 'all');
+    if(!data.ok) throw new Error(data.error || 'Export failed.');
+    const blob = new Blob([data.csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = data.filename || 'hostel_report.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    showToast(`Downloaded ${data.rowCount} row(s).`, 'success');
+  }catch(err){
+    showToast(err.message, 'error');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Download Report (CSV)';
+  }
+});
+
+// --- Admin: bulk import modals (shared logic for both New Data and Verification Updates) ---
+function showHostelImportModal(kind){
+  const isNew = kind === 'new';
+  const fnName = isNew ? 'importNewHostelData' : 'importHostelVerificationUpdates';
+  const title = isNew ? 'Import New Hostel Data' : 'Import Face Capture Updates';
+  const desc = isNew
+    ? 'Upload an Excel/CSV file with new hostel students. Duplicate App No/Reg No are skipped automatically.'
+    : 'Upload a face-capture machine report. Matching students are marked Done and locked automatically.';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:420px;">
+      <h3>${title}</h3>
+      <p style="font-size:12px; color:var(--color-text-muted); margin:0 0 12px;">${desc}</p>
+      <input type="file" id="hFileInput" accept=".xlsx,.xls,.csv" style="margin-bottom:10px;">
+      <div id="hPreview" style="font-size:12px; color:var(--color-text-muted);"></div>
+      <input type="password" id="hAdminPwd" placeholder="Admin password" autocomplete="off" style="display:none; margin-top:8px;">
+      <div class="modal-error" id="hErr"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="hCancel">Cancel</button>
+        <button class="btn btn-primary" id="hSubmit" style="display:none;">${isNew ? 'Import' : 'Apply Updates'}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const fileInput = overlay.querySelector('#hFileInput');
+  const preview = overlay.querySelector('#hPreview');
+  const pwdInput = overlay.querySelector('#hAdminPwd');
+  const errEl = overlay.querySelector('#hErr');
+  const submitBtn = overlay.querySelector('#hSubmit');
+  const cancelBtn = overlay.querySelector('#hCancel');
+
+  let parsedHeaders = null, parsedRows = null;
+  function close(){ overlay.remove(); }
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try{
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        parsedHeaders = rows[0].map(h => String(h || ''));
+        parsedRows = rows.slice(1).filter(r => r.some(c => String(c||'').trim() !== ''));
+        preview.textContent = `${parsedRows.length} row(s) detected.`;
+        pwdInput.style.display = 'block';
+        submitBtn.style.display = 'block';
+      }catch(err){
+        errEl.textContent = 'Could not read that file — ' + err.message;
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  submitBtn.addEventListener('click', async () => {
+    errEl.textContent = '';
+    if(!parsedRows || !pwdInput.value){ errEl.textContent = 'Choose a file and enter the admin password.'; return; }
+    submitBtn.disabled = true; submitBtn.textContent = 'Working…';
+    try{
+      const actor = sessionStorage.getItem(USERNAME_KEY) || 'Admin';
+      const data = await runScript(fnName, parsedHeaders, parsedRows, pwdInput.value, actor);
+      if(!data.ok) throw new Error(data.error || 'Import failed.');
+      close();
+      await loadHostelData();
+      if(isNew){
+        showToast(`${data.added} added, ${data.skippedRows.length} skipped as duplicates.`, 'success');
+      } else {
+        showToast(`${data.updated} updated, ${data.alreadyDone} already done, ${data.notFoundRows.length} not found.`, 'success');
+      }
+    }catch(err){
+      errEl.textContent = err.message;
+      submitBtn.disabled = false; submitBtn.textContent = isNew ? 'Import' : 'Apply Updates';
+    }
+  });
+
+  cancelBtn.addEventListener('click', close);
+}
+
+document.getElementById('importNewBtn')?.addEventListener('click', () => showHostelImportModal('new'));
+document.getElementById('importVerifyBtn')?.addEventListener('click', () => showHostelImportModal('verify'));
+
+loadHostelData();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</body>
+</html>
