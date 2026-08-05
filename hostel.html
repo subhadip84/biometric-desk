@@ -116,12 +116,14 @@
         <span id="welcomeMsg"></span> <span style="font-size:9px; opacity:.8;">▾</span>
       </button>
       <div id="welcomeDropdown" style="display:none; position:absolute; top:calc(100% + 8px); right:0; background:#fff; border-radius:10px; box-shadow:0 14px 36px rgba(0,0,0,.28); min-width:220px; padding:6px; z-index:1000;">
-        <button class="menu-item" id="downloadCsvBtn" style="display:none;">Download Report (CSV)</button>
-        <button class="menu-item" id="importNewBtn" style="display:none;">Import New Hostel Data</button>
-        <button class="menu-item" id="importVerifyBtn" style="display:none;">Import Face Capture Updates</button>
+        <button class="menu-item" id="changePasswordBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="12" r="4"/><path d="M11 12h9m-4 0v4m4-4v3"/></svg>Change Password</button>
+        <button class="menu-item" id="downloadCsvBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Download Report (CSV)</button>
+        <button class="menu-item" id="importNewBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg>Import New Hostel Data</button>
+        <button class="menu-item" id="importVerifyBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Import Face Capture Updates</button>
+        <div style="height:1px; background:var(--color-border); margin:4px 2px;"></div>
+        <button class="menu-item" id="logoutBtn" style="color:var(--color-pending);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>Logout</button>
       </div>
     </div>
-    <button class="btn btn-ghost" id="logoutBtn" style="padding:6px 13px; font-size:12px; background:transparent; color:#fff; border-color:rgba(255,255,255,.25);">Logout</button>
   </div>
 </header>
 
@@ -237,6 +239,65 @@ if(welcomeMsgBtn && welcomeDropdown){
   });
   document.addEventListener('click', () => { welcomeDropdown.style.display = 'none'; });
 }
+
+function showChangePasswordModal(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h3>Change Password</h3>
+      <input type="password" id="cpOldPassword" placeholder="Current password" autocomplete="off">
+      <input type="password" id="cpNewPassword" placeholder="New password (min. 4 characters)" autocomplete="off" style="margin-top:8px;">
+      <input type="password" id="cpConfirmPassword" placeholder="Confirm new password" autocomplete="off" style="margin-top:8px;">
+      <div class="modal-error" id="cpError" style="margin-top:8px;"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cpCancelBtn">Cancel</button>
+        <button class="btn btn-primary" id="cpConfirmBtn">Change Password</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const oldInput = overlay.querySelector('#cpOldPassword');
+  const newInput = overlay.querySelector('#cpNewPassword');
+  const confirmInput = overlay.querySelector('#cpConfirmPassword');
+  const errorEl = overlay.querySelector('#cpError');
+  const confirmBtn = overlay.querySelector('#cpConfirmBtn');
+  const cancelBtn = overlay.querySelector('#cpCancelBtn');
+
+  oldInput.focus();
+  function close(){ overlay.remove(); }
+
+  async function submit(){
+    errorEl.textContent = '';
+    if(!oldInput.value || !newInput.value || !confirmInput.value){
+      errorEl.textContent = 'Fill in all fields.';
+      return;
+    }
+    if(newInput.value !== confirmInput.value){
+      errorEl.textContent = 'New passwords do not match.';
+      return;
+    }
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Saving…';
+    try{
+      const userId = sessionStorage.getItem(USERID_KEY);
+      const data = await runScript('changeOwnPassword', userId, oldInput.value, newInput.value);
+      if(!data.ok) throw new Error(data.error || 'Could not change password.');
+      close();
+      showToast('Password changed successfully.', 'success');
+    }catch(err){
+      errorEl.textContent = err.message;
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Change Password';
+    }
+  }
+
+  cancelBtn.addEventListener('click', close);
+  confirmBtn.addEventListener('click', submit);
+  overlay.addEventListener('keydown', (e) => { if(e.key === 'Enter') submit(); });
+}
+document.getElementById('changePasswordBtn').addEventListener('click', showChangePasswordModal);
 
 document.getElementById('logoutBtn').addEventListener('click', () => {
   sessionStorage.removeItem(SESSION_KEY);
