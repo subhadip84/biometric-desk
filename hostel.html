@@ -380,7 +380,7 @@ function showChangePasswordModal(){
 }
 document.getElementById('changePasswordBtn').addEventListener('click', showChangePasswordModal);
 
-document.getElementById('logoutBtn').addEventListener('click', () => {
+function logout(reason){
   sessionStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(ADMIN_KEY);
   sessionStorage.removeItem(DEMO_KEY);
@@ -389,8 +389,23 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
   sessionStorage.removeItem(USERNAME_KEY);
   sessionStorage.removeItem(PERMISSIONS_KEY);
   sessionStorage.removeItem('bioDeskLoginTime');
-  window.location.href = 'index.html';
+  window.location.href = 'index.html' + (reason ? ('?loggedOutReason=' + encodeURIComponent(reason)) : '');
+}
+document.getElementById('logoutBtn').addEventListener('click', () => logout());
+
+// --- Auto-logout after 30 minutes of inactivity, matching the main app ---
+const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
+let inactivityTimer = null;
+function resetInactivityTimer(){
+  clearTimeout(inactivityTimer);
+  inactivityTimer = setTimeout(() => {
+    logout('You were logged out after 30 minutes of inactivity.');
+  }, INACTIVITY_LIMIT_MS);
+}
+['mousemove','mousedown','keydown','scroll','touchstart','click'].forEach(evt => {
+  document.addEventListener(evt, resetInactivityTimer, { passive: true });
 });
+resetInactivityTimer();
 
 function runScript(fnName, ...args){
   return fetch(API_BASE_URL, {
