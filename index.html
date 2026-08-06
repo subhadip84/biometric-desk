@@ -4112,6 +4112,15 @@ if(helpChatInput){
   helpChatInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') submitHelpQuestion(); });
 }
 
+// Show a message if we were redirected here after an auto-logout on the hostel page
+const urlParams = new URLSearchParams(window.location.search);
+const loggedOutReason = urlParams.get('loggedOutReason');
+if(loggedOutReason){
+  loginError.textContent = loggedOutReason;
+  loginError.classList.add('show');
+  window.history.replaceState({}, '', window.location.pathname);
+}
+
 // Auto-login check — must run last, after every function/variable above is defined,
 // since a returning session immediately calls enterApp(), which uses them all.
 if(sessionStorage.getItem(SESSION_KEY) === 'yes'){
