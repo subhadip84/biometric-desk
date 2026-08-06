@@ -1031,11 +1031,9 @@ function renderDetail(s){
           const currentUserId = sessionStorage.getItem(USERID_KEY) || 'unknown';
           const data = await runScript('updateHostelStatus', s.id, e.target.value, currentUserId);
           if(!data.ok) throw new Error(data.error || 'Update failed.');
-          s.status = e.target.value;
-          s.locked = true;
-          renderDetail(s);
-          renderStats();
-          renderTable();
+          await loadHostelData(); // refetch so verifiedBy/firstVerifiedBy/timestamps are current, not just status/locked
+          const freshStudent = hostel.find(x => x.id === s.id);
+          if(freshStudent) renderDetail(freshStudent);
           showToast('Saved.', 'success');
         }catch(err){
           showToast(err.message, 'error');
