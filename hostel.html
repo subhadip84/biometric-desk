@@ -679,6 +679,13 @@ function downloadHostelDetailRecords(hostelName, statusFilter){
   showToast(`Downloaded ${matches.length} record(s).`, 'success');
 }
 
+function getStatusSymbol(s){
+  if(s.status !== 'done') return '';
+  if(s.verifiedBy.indexOf('(Revised)') !== -1) return ' <span title="Overturned by admin">⚠️</span>';
+  if(s.verifiedBy.indexOf('[Hosteller]') !== -1) return ' <span title="Verified by hosteller-only staff">🏠</span>';
+  return '';
+}
+
 let currentTableFilter = 'all';
 function renderTable(){
   const tbody = document.getElementById('tableBody');
@@ -699,7 +706,7 @@ function renderTable(){
       <td class="mono" style="font-family:var(--font-mono);">${escapeHtml(s.applicationNo)||'—'}</td>
       <td>${escapeHtml(s.hostelName)||'—'}</td>
       <td>${escapeHtml(s.roomNo)||'—'}</td>
-      <td><span class="status-pill ${s.status}">${s.status==='done'?'Verified':'Pending'}</span>${s.locked?' 🔒':''}</td>
+      <td><span class="status-pill ${s.status}">${s.status==='done'?'Verified':'Pending'}</span>${getStatusSymbol(s)}${s.locked?' 🔒':''}</td>
     </tr>
   `).join('');
   tbody.querySelectorAll('tr').forEach(tr => {
@@ -737,7 +744,7 @@ searchInput.addEventListener('input', () => {
     return `
     <div class="sugg-item" data-id="${s.id}">
       <div><div style="font-weight:600; font-size:13px;">${escapeHtml(s.studentName)||'(no name)'}</div><div style="font-family:var(--font-mono); font-size:11px; color:var(--color-text-muted);">${escapeHtml(idLine)||'—'}</div></div>
-      <span class="status-pill ${s.status}">${s.status==='done'?'Verified':'Pending'}</span>
+      <span class="status-pill ${s.status}">${s.status==='done'?'Verified':'Pending'}</span>${getStatusSymbol(s)}
     </div>
   `;
   }).join('');
@@ -927,13 +934,22 @@ function renderDetail(s){
   const isDone = s.status === 'done';
   const locked = s.locked;
   const detailArea = document.getElementById('detailArea');
+
+  const isHostellerVerified = isDone && s.verifiedBy.indexOf('[Hosteller]') !== -1;
+  const isRevised = isDone && s.verifiedBy.indexOf('(Revised)') !== -1;
+  let statusSymbol = '';
+  if(isDone){
+    if(isRevised) statusSymbol = ' <span title="Overturned by admin">⚠️</span>';
+    else if(isHostellerVerified) statusSymbol = ' <span title="Verified by hosteller-only staff">🏠</span>';
+  }
+
   detailArea.innerHTML = `
     <div class="verify-card">
       <div class="vc-head">
         <div class="seal ${isDone?'is-done':''}">${isDone ? '✓' : initials(s.studentName)}</div>
         <div class="vc-head-text">
           <div class="name">${escapeHtml(s.studentName)||'(no name)'}</div>
-          <div class="status-line">${isDone ? 'Face capture complete' : 'Awaiting face capture'}${locked ? ' · Locked' : ''}</div>
+          <div class="status-line">${isDone ? 'Face capture complete' : 'Awaiting face capture'}${statusSymbol}${locked ? ' · Locked' : ''}</div>
         </div>
       </div>
       <div class="vc-body">
@@ -947,6 +963,12 @@ function renderDetail(s){
           <div class="detail-item"><div class="lab">Room No</div><div class="val">${escapeHtml(s.roomNo)||'—'}</div></div>
           <div class="detail-item"><div class="lab">Food Coupon</div><div class="val">${escapeHtml(s.foodCoupon)||'—'}</div></div>
         </div>
+        ${(s.firstVerifiedBy || s.verifiedBy) ? `
+          <div style="margin-top:14px; padding:12px; background:var(--color-bg); border-radius:8px; font-size:11.5px; color:var(--color-text-muted); line-height:1.7;">
+            ${s.firstVerifiedBy ? `<div><strong style="color:var(--color-text);">First verified:</strong> ${escapeHtml(s.firstVerifiedBy)} ${s.firstVerifiedAt ? '· ' + escapeHtml(s.firstVerifiedAt) : ''}</div>` : ''}
+            ${(s.verifiedBy && s.verifiedBy !== s.firstVerifiedBy) ? `<div><strong style="color:var(--color-text);">Last verified:</strong> ${escapeHtml(s.verifiedBy)} ${s.verifiedAt ? '· ' + escapeHtml(s.verifiedAt) : ''}</div>` : ''}
+          </div>
+        ` : ''}
         <div class="verify-controls">
           <div style="font-size:12.5px; font-weight:600; color:var(--color-text-muted); margin-bottom:10px;">Mark face capture status</div>
           <div class="radio-row">
