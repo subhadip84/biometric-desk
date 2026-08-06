@@ -393,7 +393,7 @@ function showChangePasswordModal(){
 }
 document.getElementById('changePasswordBtn').addEventListener('click', showChangePasswordModal);
 
-function logout(reason){
+function logout(reason, successMessage){
   sessionStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(ADMIN_KEY);
   sessionStorage.removeItem(DEMO_KEY);
@@ -402,9 +402,12 @@ function logout(reason){
   sessionStorage.removeItem(USERNAME_KEY);
   sessionStorage.removeItem(PERMISSIONS_KEY);
   sessionStorage.removeItem('bioDeskLoginTime');
-  window.location.href = 'index.html' + (reason ? ('?loggedOutReason=' + encodeURIComponent(reason)) : '');
+  let url = 'index.html';
+  if(reason) url += '?loggedOutReason=' + encodeURIComponent(reason);
+  else if(successMessage) url += '?loggedOutSuccess=' + encodeURIComponent(successMessage);
+  window.location.href = url;
 }
-document.getElementById('logoutBtn').addEventListener('click', () => logout());
+document.getElementById('logoutBtn').addEventListener('click', () => logout(null, 'You have been logged out successfully.'));
 
 // --- Auto-logout after 30 minutes of inactivity, matching the main app ---
 const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
