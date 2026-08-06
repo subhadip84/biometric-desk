@@ -406,6 +406,32 @@ function runScript(fnName, ...args){
     .catch(err => { throw new Error(err && err.message ? err.message : 'Network error contacting the backend.'); });
 }
 
+// Same as runScript, but reports genuine 0-100% upload progress via
+// XMLHttpRequest (fetch() has no built-in progress events).
+function runScriptWithProgress(fnName, args, onProgress){
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', API_BASE_URL);
+    xhr.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+
+    xhr.upload.onprogress = (e) => {
+      if(e.lengthComputable && onProgress){
+        const pct = Math.round((e.loaded / e.total) * 100);
+        onProgress(pct, false);
+      }
+    };
+    xhr.upload.onload = () => { if(onProgress) onProgress(100, true); };
+
+    xhr.onload = () => {
+      try{ resolve(JSON.parse(xhr.responseText)); }
+      catch(e){ reject(new Error('The server is still starting up — please try again in a moment.')); }
+    };
+    xhr.onerror = () => reject(new Error('Network error contacting the backend.'));
+
+    xhr.send(JSON.stringify({ fn: fnName, args: args }));
+  });
+}
+
 function escapeHtml(str){
   return String(str ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
@@ -897,6 +923,12 @@ function showHostelImportModal(kind){
       <div id="hPreview" style="font-size:12px; color:var(--color-text-muted);"></div>
       <input type="password" id="hAdminPwd" placeholder="Admin password" autocomplete="off" style="display:none; margin-top:8px;">
       <div class="modal-error" id="hErr"></div>
+      <div id="hProgressWrap" style="display:none; margin-bottom:14px;">
+        <div style="background:var(--color-bg); border-radius:20px; height:32px; overflow:hidden; position:relative;">
+          <div id="hProgressBar" style="position:absolute; top:0; bottom:0; left:0; width:0%; background:var(--color-navy); border-radius:20px; transition:width .15s ease;"></div>
+          <div id="hProgressLabel" style="position:relative; z-index:1; height:100%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:600;">Uploading… 0%</div>
+        </div>
+      </div>
       <div class="modal-actions">
         <button class="btn btn-ghost" id="hCancel">Cancel</button>
         <button class="btn btn-primary" id="hSubmit" style="display:none;">${isNew ? 'Import' : 'Apply Updates'}</button>
@@ -910,6 +942,9 @@ function showHostelImportModal(kind){
   const errEl = overlay.querySelector('#hErr');
   const submitBtn = overlay.querySelector('#hSubmit');
   const cancelBtn = overlay.querySelector('#hCancel');
+  const progressWrap = overlay.querySelector('#hProgressWrap');
+  const progressBar = overlay.querySelector('#hProgressBar');
+  const progressLabel = overlay.querySelector('#hProgressLabel');
 
   let parsedHeaders = null, parsedRows = null;
   function close(){ overlay.remove(); }
@@ -939,11 +974,22 @@ function showHostelImportModal(kind){
   submitBtn.addEventListener('click', async () => {
     errEl.textContent = '';
     if(!parsedRows || !pwdInput.value){ errEl.textContent = 'Choose a file and enter the admin password.'; return; }
-    submitBtn.disabled = true; submitBtn.textContent = 'Working…';
+    submitBtn.style.display = 'none';
+    fileInput.disabled = true; pwdInput.disabled = true;
+    progressWrap.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressLabel.textContent = 'Uploading… 0%';
     try{
       const actor = sessionStorage.getItem(USERNAME_KEY) || 'Admin';
-      const data = await runScript(fnName, parsedHeaders, parsedRows, pwdInput.value, actor);
+      const data = await runScriptWithProgress(fnName, [parsedHeaders, parsedRows, pwdInput.value, actor], (pct, uploadDone) => {
+        progressBar.style.width = pct + '%';
+        progressLabel.textContent = uploadDone ? 'Processing…' : `Uploading… ${pct}%`;
+      });
       if(!data.ok) throw new Error(data.error || 'Import failed.');
+      progressLabel.textContent = 'Upload complete';
+      progressBar.style.width = '100%';
+      progressBar.style.background = 'var(--color-success)';
+      await new Promise(res => setTimeout(res, 500));
       close();
       await loadHostelData();
       await loadFreshUploadInfo();
@@ -954,7 +1000,9 @@ function showHostelImportModal(kind){
       }
     }catch(err){
       errEl.textContent = err.message;
-      submitBtn.disabled = false; submitBtn.textContent = isNew ? 'Import' : 'Apply Updates';
+      progressWrap.style.display = 'none';
+      submitBtn.style.display = 'block';
+      fileInput.disabled = false; pwdInput.disabled = false;
     }
   });
 
