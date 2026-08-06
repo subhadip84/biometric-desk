@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hostel Face Capture Desk — Adamas University</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
@@ -25,7 +27,7 @@
     --color-pending:#e0654a; --color-pending-soft:#2e1712;
     --color-border:#30363d; --color-text:#e6edf3; --color-text-muted:#8b949e;
   }
-  body.focus-mode #statsRowPanel, body.focus-mode #hostelSummaryPanel{
+  body.focus-mode #statsRowPanel, body.focus-mode #hostelSummaryPanel, body.focus-mode #hostelTrendChartPanel{
     display:none !important;
   }
   *{box-sizing:border-box;}
@@ -140,6 +142,7 @@
       </button>
       <div id="welcomeDropdown" style="display:none; position:absolute; top:calc(100% + 8px); right:0; background:#fff; border-radius:10px; box-shadow:0 14px 36px rgba(0,0,0,.28); min-width:220px; padding:6px; z-index:1000;">
         <button class="menu-item" id="changePasswordBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="12" r="4"/><path d="M11 12h9m-4 0v4m4-4v3"/></svg>Change Password</button>
+        <button class="menu-item" id="hostelActivityLogBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>Activity Log</button>
         <button class="menu-item" id="downloadCsvBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Download Report (CSV)</button>
         <button class="menu-item" id="importNewBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg>Import New Hostel Data</button>
         <button class="menu-item" id="importVerifyBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Import Face Capture Updates</button>
@@ -231,6 +234,14 @@
           <canvas id="summaryChart"></canvas>
         </div>
       </div>
+
+      <div class="panel" id="hostelTrendChartPanel" style="margin-top:20px; display:none;">
+        <h2 style="margin:0 0 4px;">Face Capture Progress (Last 14 Days)</h2>
+        <div style="font-size:11.5px; color:var(--color-text-muted); margin-bottom:10px;">Number of students verified each day</div>
+        <div style="height:240px;">
+          <canvas id="hostelTrendChart"></canvas>
+        </div>
+      </div>
     </div>
   </div>
 </main>
@@ -262,7 +273,8 @@ if(isAdminOrDemo){
   document.getElementById('todayStatsGrid').style.gridTemplateColumns = '1fr 1fr';
   document.getElementById('freshDataColumn').style.display = 'block';
   document.getElementById('hostelSummaryPanel').style.display = 'block';
-  ['downloadCsvBtn', 'importNewBtn', 'importVerifyBtn'].forEach(id => {
+  document.getElementById('hostelTrendChartPanel').style.display = 'block';
+  ['hostelActivityLogBtn', 'downloadCsvBtn', 'importNewBtn', 'importVerifyBtn'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = 'block';
   });
@@ -533,7 +545,7 @@ function renderStats(){
   const verifiedToday = hostel.filter(s => s.status === 'done' && s.verifiedAt && s.verifiedAt.indexOf(todayStr) === 0).length;
   document.getElementById('verifiedTodayCount').textContent = verifiedToday;
 
-  if(isAdminOrDemo) renderHostelSummary();
+  if(isAdminOrDemo){ renderHostelSummary(); renderHostelTrendChart(); }
 }
 
 let hostelSummaryChartInstance = null;
@@ -596,6 +608,48 @@ function renderHostelSummary(){
       responsive: true, maintainAspectRatio: false,
       scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } },
       plugins: { legend: { position: 'top' } }
+    }
+  });
+}
+
+let hostelTrendChartInstance = null;
+function renderHostelTrendChart(){
+  const canvas = document.getElementById('hostelTrendChart');
+  if(!canvas || typeof Chart === 'undefined') return;
+
+  const days = [];
+  for(let i = 13; i >= 0; i--){
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+  const counts = {};
+  days.forEach(d => counts[d] = 0);
+  hostel.forEach(s => {
+    if(!s.verifiedAt) return;
+    const dayKey = s.verifiedAt.slice(0, 10);
+    if(counts.hasOwnProperty(dayKey)) counts[dayKey]++;
+  });
+
+  const labels = days.map(d => { const [y, m, dd] = d.split('-'); return `${m}/${dd}`; });
+
+  if(hostelTrendChartInstance){ hostelTrendChartInstance.destroy(); hostelTrendChartInstance = null; }
+  hostelTrendChartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Verified',
+        data: days.map(d => counts[d]),
+        borderColor: '#1F8A56',
+        backgroundColor: 'rgba(31,138,86,.12)',
+        fill: true, tension: 0.3, pointRadius: 3
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      plugins: { legend: { display: false } }
     }
   });
 }
@@ -695,6 +749,121 @@ function selectStudent(id){
   suggestions.innerHTML = '';
   renderDetail(s);
 }
+
+function showActivityLogModal(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:640px;">
+      <h3>Activity Log</h3>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+        <span style="font-size:11.5px; color:var(--color-text-muted);">Export range:</span>
+        <input type="date" id="alFromDate" style="padding:6px 9px; border-radius:6px; border:1px solid var(--color-border); font-size:12px; font-family:var(--font-body);">
+        <span style="font-size:11.5px; color:var(--color-text-muted);">to</span>
+        <input type="date" id="alToDate" style="padding:6px 9px; border-radius:6px; border:1px solid var(--color-border); font-size:12px; font-family:var(--font-body);">
+        <button class="btn btn-ghost" id="alExportPdfBtn" style="padding:6px 12px; font-size:12px;">Export PDF</button>
+      </div>
+      <div id="alContent" style="font-size:12.5px; color:var(--color-text-muted);">Loading…</div>
+      <button class="btn btn-ghost" id="alCloseBtn" style="width:100%; margin-top:14px;">Close</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const content = overlay.querySelector('#alContent');
+  const closeBtn = overlay.querySelector('#alCloseBtn');
+  const fromDateInput = overlay.querySelector('#alFromDate');
+  const toDateInput = overlay.querySelector('#alToDate');
+  const exportBtn = overlay.querySelector('#alExportPdfBtn');
+  function close(){ overlay.remove(); }
+
+  let allEntries = [];
+
+  runScript('getActivityLog', 1000).then(data => {
+    if(!data.ok){
+      content.innerHTML = `<div class="search-hint">${escapeHtml(data.error || 'Could not load activity log.')}</div>`;
+      return;
+    }
+    allEntries = data.entries;
+    if(!data.entries.length){
+      content.innerHTML = `<div class="search-hint">No activity recorded yet.</div>`;
+      return;
+    }
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    fromDateInput.value = todayStr;
+    toDateInput.value = todayStr;
+
+    content.innerHTML = `
+      <div style="max-height:420px; overflow:auto; border:1px solid var(--color-border); border-radius:8px;">
+        <table style="width:100%; border-collapse:collapse; font-size:12px;">
+          <thead>
+            <tr>
+              <th style="padding:7px 10px; background:var(--color-bg); text-align:left; position:sticky; top:0;">Time</th>
+              <th style="padding:7px 10px; background:var(--color-bg); text-align:left; position:sticky; top:0;">Actor</th>
+              <th style="padding:7px 10px; background:var(--color-bg); text-align:left; position:sticky; top:0;">Action</th>
+              <th style="padding:7px 10px; background:var(--color-bg); text-align:left; position:sticky; top:0;">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.entries.map(e => `
+              <tr>
+                <td style="padding:7px 10px; border-top:1px solid var(--color-border); font-family:var(--font-mono); white-space:nowrap; color:var(--color-text-muted);">${escapeHtml(e.timestamp)}</td>
+                <td style="padding:7px 10px; border-top:1px solid var(--color-border); font-weight:600;">${escapeHtml(e.actor)}</td>
+                <td style="padding:7px 10px; border-top:1px solid var(--color-border);">${escapeHtml(e.action)}</td>
+                <td style="padding:7px 10px; border-top:1px solid var(--color-border); color:var(--color-text-muted);">${escapeHtml(e.details)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }).catch(err => {
+    content.innerHTML = `<div class="search-hint">Could not load activity log — ${escapeHtml(err.message)}</div>`;
+  });
+
+  exportBtn.addEventListener('click', () => {
+    if(typeof window.jspdf === 'undefined'){
+      showToast('PDF library is still loading — try again in a moment.', 'error');
+      return;
+    }
+    if(!allEntries.length){
+      showToast('No activity data loaded yet.', 'error');
+      return;
+    }
+    const fromStr = fromDateInput.value;
+    const toStr = toDateInput.value;
+    const filtered = allEntries.filter(e => {
+      const entryDate = e.timestamp.slice(0, 10);
+      return (!fromStr || entryDate >= fromStr) && (!toStr || entryDate <= toStr);
+    });
+    if(!filtered.length){
+      showToast('No activity entries in that date range.', 'error');
+      return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape' });
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('Adamas University · AKC IT Support', 14, 16);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text('Hostel Face Capture Desk — Activity Log', 14, 22);
+    doc.text(`Range: ${fromStr || 'earliest'} to ${toStr || 'latest'}  ·  Generated: ${new Date().toLocaleString('en-IN')}`, 14, 27);
+    doc.autoTable({
+      startY: 32,
+      head: [['Time', 'Actor', 'Action', 'Details']],
+      body: filtered.map(e => [e.timestamp, e.actor, e.action, e.details]),
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [27, 42, 74] },
+      alternateRowStyles: { fillColor: [245, 246, 249] }
+    });
+    doc.save(`hostel_activity_log_${fromStr || 'all'}_to_${toStr || 'all'}.pdf`);
+    showToast(`Exported ${filtered.length} entries.`, 'success');
+  });
+
+  closeBtn.addEventListener('click', close);
+}
+document.getElementById('hostelActivityLogBtn').addEventListener('click', showActivityLogModal);
 
 function showConfirmModal(message, title){
   return new Promise(resolve => {
