@@ -301,12 +301,12 @@
   .login-btn:disabled{ opacity:.6; cursor:not-allowed; }
   .login-error{
     font-size:12.5px; color:var(--color-pending); background:var(--color-pending-soft);
-    border-radius:7px; padding:9px 12px; margin-bottom:16px; text-align:left; display:none;
+    border-radius:7px; padding:9px 12px; text-align:left; display:none;
   }
   .login-error.show{ display:block; }
   .login-success{
     font-size:12.5px; color:var(--color-success); background:var(--color-success-soft);
-    border-radius:7px; padding:9px 12px; margin-bottom:16px; text-align:left; display:none;
+    border-radius:7px; padding:9px 12px; text-align:left; display:none;
   }
   .login-success.show{ display:block; }
   .login-footer{ font-size:11px; color:var(--color-text-muted); margin-top:12px; letter-spacing:.2px; }
@@ -320,8 +320,10 @@
     <div class="login-title">Biometric Verification Desk</div>
     <div class="login-sub">Adamas University · AKC IT SUPPORT</div>
     <div class="login-divider"></div>
-    <div class="login-success" id="loginSuccess"></div>
-    <div class="login-error" id="loginError"></div>
+    <div id="loginMsgWrap" style="min-height:38px; margin-bottom:16px;">
+      <div class="login-success" id="loginSuccess"></div>
+      <div class="login-error" id="loginError"></div>
+    </div>
     <form id="loginForm">
       <div class="login-field">
         <label for="loginUserId">User ID</label>
