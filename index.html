@@ -10,6 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
 <style>
   :root{
     --color-bg:#F5F6F9; --color-surface:#FFFFFF;
@@ -536,6 +538,14 @@
       <canvas id="siteSummaryChart"></canvas>
     </div>
   </div>
+
+  <div class="panel table-panel" id="trendChartPanel" style="display:none; margin-top:24px;">
+    <h2 style="margin:0 0 4px;">Verification Progress (Last 14 Days)</h2>
+    <div style="font-size:11.5px; color:var(--color-text-muted); margin-bottom:10px;">Number of students verified each day</div>
+    <div style="height:260px;">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
 </main>
 
 <div id="helpChatToggle" style="position:fixed; bottom:24px; right:24px; width:52px; height:52px; border-radius:50%; background:var(--color-gold); color:var(--color-navy-deep); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; box-shadow:0 6px 18px rgba(0,0,0,.25); cursor:pointer; z-index:900;">?</div>
@@ -726,6 +736,7 @@ async function fetchStudents(){
     renderStats();
     renderTable();
     renderSiteSummary();
+    renderTrendChart();
     renderPrioritySites();
     updateTodayVerifiedCount();
     updateTodayImportCount();
@@ -1835,6 +1846,56 @@ function renderSiteSummaryChart(rows){
   });
 }
 
+let trendChartInstance = null;
+function renderTrendChart(){
+  const panel = document.getElementById('trendChartPanel');
+  const canvas = document.getElementById('trendChart');
+  if(!panel || !canvas || typeof Chart === 'undefined') return;
+
+  // Build the last 14 calendar days (oldest first), each as a YYYY-MM-DD key
+  const days = [];
+  for(let i = 13; i >= 0; i--){
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+  const counts = {};
+  days.forEach(d => counts[d] = 0);
+  roster.forEach(s => {
+    if(!s.verifiedAt) return;
+    const dayKey = s.verifiedAt.slice(0, 10);
+    if(counts.hasOwnProperty(dayKey)) counts[dayKey]++;
+  });
+
+  const labels = days.map(d => {
+    const [y, m, dd] = d.split('-');
+    return `${m}/${dd}`;
+  });
+
+  if(trendChartInstance){ trendChartInstance.destroy(); trendChartInstance = null; }
+  trendChartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Verified',
+        data: days.map(d => counts[d]),
+        borderColor: '#1F8A56',
+        backgroundColor: 'rgba(31,138,86,.12)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
 const siteSummarySortSelect = document.getElementById('siteSummarySort');
 if(siteSummarySortSelect){
   siteSummarySortSelect.addEventListener('change', renderSiteSummary);
@@ -1902,6 +1963,8 @@ function enterApp(){
   if(lockAllBtn) lockAllBtn.style.display = perms.lockAll ? 'block' : 'none';
   const siteSummaryPanel = document.getElementById('siteSummaryPanel');
   if(siteSummaryPanel) siteSummaryPanel.style.display = perms.viewSummary ? 'block' : 'none';
+  const trendChartPanel = document.getElementById('trendChartPanel');
+  if(trendChartPanel) trendChartPanel.style.display = perms.viewSummary ? 'block' : 'none';
   const resetUserPasswordBtn = document.getElementById('resetUserPasswordBtn');
   if(resetUserPasswordBtn) resetUserPasswordBtn.style.display = perms.resetPasswords ? 'block' : 'none';
   const manageUsersBtn = document.getElementById('manageUsersBtn');
@@ -3287,6 +3350,13 @@ function showActivityLogModal(){
   overlay.innerHTML = `
     <div class="modal-box" style="max-width:640px;">
       <h3>Activity Log</h3>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+        <span style="font-size:11.5px; color:var(--color-text-muted);">Export range:</span>
+        <input type="date" id="alFromDate" style="padding:6px 9px; border-radius:6px; border:1px solid var(--color-border); font-size:12px; font-family:var(--font-body);">
+        <span style="font-size:11.5px; color:var(--color-text-muted);">to</span>
+        <input type="date" id="alToDate" style="padding:6px 9px; border-radius:6px; border:1px solid var(--color-border); font-size:12px; font-family:var(--font-body);">
+        <button class="btn btn-ghost" id="alExportPdfBtn" style="padding:6px 12px; font-size:12px;">Export PDF</button>
+      </div>
       <div id="alContent" style="font-size:12.5px; color:var(--color-text-muted);"><div class="skeleton-line" style="width:70%;"></div><div class="skeleton-line" style="width:45%;"></div></div>
       <button class="btn btn-ghost" id="alCloseBtn" style="width:100%; margin-top:14px;">Close</button>
     </div>
@@ -3295,18 +3365,31 @@ function showActivityLogModal(){
 
   const content = overlay.querySelector('#alContent');
   const closeBtn = overlay.querySelector('#alCloseBtn');
+  const fromDateInput = overlay.querySelector('#alFromDate');
+  const toDateInput = overlay.querySelector('#alToDate');
+  const exportBtn = overlay.querySelector('#alExportPdfBtn');
 
   function close(){ overlay.remove(); }
 
-  runScript('getActivityLog', 200).then(data => {
+  let allEntries = [];
+
+  runScript('getActivityLog', 1000).then(data => {
     if(!data.ok){
       content.innerHTML = `<div class="search-hint">${escapeHtml(data.error || 'Could not load activity log.')}</div>`;
       return;
     }
+    allEntries = data.entries;
     if(!data.entries.length){
       content.innerHTML = `<div class="search-hint">No activity recorded yet.</div>`;
       return;
     }
+
+    // Default the range to today
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    fromDateInput.value = todayStr;
+    toDateInput.value = todayStr;
+
     content.innerHTML = `
       <div style="max-height:420px; overflow:auto; border:1px solid var(--color-border); border-radius:8px;">
         <table style="width:100%; border-collapse:collapse; font-size:12px;">
@@ -3333,6 +3416,50 @@ function showActivityLogModal(){
     `;
   }).catch(err => {
     content.innerHTML = `<div class="search-hint">Could not load activity log — ${escapeHtml(err.message)}</div>`;
+  });
+
+  exportBtn.addEventListener('click', () => {
+    if(typeof window.jspdf === 'undefined'){
+      showToast('PDF library is still loading — try again in a moment.', 'error');
+      return;
+    }
+    if(!allEntries.length){
+      showToast('No activity data loaded yet.', 'error');
+      return;
+    }
+    const fromStr = fromDateInput.value;
+    const toStr = toDateInput.value;
+    const filtered = allEntries.filter(e => {
+      const entryDate = e.timestamp.slice(0, 10);
+      return (!fromStr || entryDate >= fromStr) && (!toStr || entryDate <= toStr);
+    });
+    if(!filtered.length){
+      showToast('No activity entries in that date range.', 'error');
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape' });
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('Adamas University · AKC IT Support', 14, 16);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text('Biometric Verification Desk — Activity Log', 14, 22);
+    doc.text(`Range: ${fromStr || 'earliest'} to ${toStr || 'latest'}  ·  Generated: ${new Date().toLocaleString('en-IN')}`, 14, 27);
+
+    doc.autoTable({
+      startY: 32,
+      head: [['Time', 'Actor', 'Action', 'Details']],
+      body: filtered.map(e => [e.timestamp, e.actor, e.action, e.details]),
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [27, 42, 74] },
+      alternateRowStyles: { fillColor: [245, 246, 249] }
+    });
+
+    doc.save(`activity_log_${fromStr || 'all'}_to_${toStr || 'all'}.pdf`);
+    showToast(`Exported ${filtered.length} entries.`, 'success');
   });
 
   closeBtn.addEventListener('click', close);
