@@ -4239,12 +4239,17 @@ if(helpChatInput){
   helpChatInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') submitHelpQuestion(); });
 }
 
-// Show a message if we were redirected here after an auto-logout on the hostel page
+// Show a message if we were redirected here after logging out on the hostel page
 const urlParams = new URLSearchParams(window.location.search);
 const loggedOutReason = urlParams.get('loggedOutReason');
+const loggedOutSuccess = urlParams.get('loggedOutSuccess');
 if(loggedOutReason){
   loginError.textContent = loggedOutReason;
   loginError.classList.add('show');
+  window.history.replaceState({}, '', window.location.pathname);
+} else if(loggedOutSuccess){
+  loginSuccess.textContent = loggedOutSuccess;
+  loginSuccess.classList.add('show');
   window.history.replaceState({}, '', window.location.pathname);
 }
 
