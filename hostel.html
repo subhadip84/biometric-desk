@@ -674,12 +674,15 @@ searchInput.addEventListener('input', () => {
   const matches = findMatches(searchInput.value);
   if(!searchInput.value.trim()){ suggestions.innerHTML = ''; return; }
   if(!matches.length){ suggestions.innerHTML = '<div style="font-size:12px; color:var(--color-text-muted); margin-top:8px;">No matches.</div>'; return; }
-  suggestions.innerHTML = matches.slice(0, 10).map(s => `
+  suggestions.innerHTML = matches.slice(0, 10).map(s => {
+    const idLine = [s.applicationNo, s.registrationNo, s.machineCode].filter(Boolean).join(' · ');
+    return `
     <div class="sugg-item" data-id="${s.id}">
-      <div><div style="font-weight:600; font-size:13px;">${escapeHtml(s.studentName)||'(no name)'}</div><div style="font-family:var(--font-mono); font-size:11px; color:var(--color-text-muted);">${escapeHtml(s.applicationNo)}</div></div>
+      <div><div style="font-weight:600; font-size:13px;">${escapeHtml(s.studentName)||'(no name)'}</div><div style="font-family:var(--font-mono); font-size:11px; color:var(--color-text-muted);">${escapeHtml(idLine)||'—'}</div></div>
       <span class="status-pill ${s.status}">${s.status==='done'?'Verified':'Pending'}</span>
     </div>
-  `).join('');
+  `;
+  }).join('');
   suggestions.querySelectorAll('.sugg-item').forEach(el => {
     el.addEventListener('click', () => selectStudent(el.dataset.id));
   });
