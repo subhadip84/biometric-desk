@@ -650,6 +650,19 @@ function launchConfetti(){
   setTimeout(() => container.remove(), 4000);
 }
 
+// Clicking the dimmed background of any modal closes it, unless that
+// specific modal is marked non-dismissible (e.g. the forced password
+// change, which must be completed before continuing). Triggers the modal's
+// own existing Cancel/No/Close button rather than removing the DOM
+// directly, so any Promise resolution tied to that button still runs.
+document.addEventListener('click', (e) => {
+  if(e.target.classList && e.target.classList.contains('modal-overlay') && e.target.dataset.noDismiss !== 'true'){
+    const dismissBtn = e.target.querySelector('.btn-ghost, [id$="CancelBtn"], [id$="NoBtn"], [id$="CloseBtn"], [id$="OkBtn"]');
+    if(dismissBtn) dismissBtn.click();
+    else e.target.remove();
+  }
+});
+
 function showToast(message, type){
   const container = document.getElementById('toastContainer');
   if(!container) return;
@@ -2343,6 +2356,7 @@ if(lockAllBtn){
 function showForcedPasswordChangeModal(userId, currentPassword){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
+  overlay.dataset.noDismiss = 'true';
   overlay.innerHTML = `
     <div class="modal-box">
       <h3>Set Your Password</h3>
