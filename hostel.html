@@ -466,6 +466,17 @@ function runScriptWithProgress(fnName, args, onProgress){
 function escapeHtml(str){
   return String(str ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
+// Clicking the dimmed background of any modal closes it. Triggers the
+// modal's own existing Cancel/No/Close button rather than removing the
+// DOM directly, so any Promise resolution tied to that button still runs.
+document.addEventListener('click', (e) => {
+  if(e.target.classList && e.target.classList.contains('modal-overlay')){
+    const dismissBtn = e.target.querySelector('.btn-ghost, [id$="CancelBtn"], [id$="NoBtn"], [id$="CloseBtn"], [id$="OkBtn"]');
+    if(dismissBtn) dismissBtn.click();
+    else e.target.remove();
+  }
+});
+
 function showToast(message, type){
   const container = document.getElementById('toastContainer');
   const toast = document.createElement('div');
