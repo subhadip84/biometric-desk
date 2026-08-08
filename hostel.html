@@ -964,9 +964,13 @@ function renderDetail(s){
           <div class="detail-item"><div class="lab">Food Coupon</div><div class="val">${escapeHtml(s.foodCoupon)||'—'}</div></div>
         </div>
         ${(s.firstVerifiedBy || s.verifiedBy) ? `
-          <div style="margin-top:14px; padding:12px; background:var(--color-bg); border-radius:8px; font-size:11.5px; color:var(--color-text-muted); line-height:1.7;">
-            ${s.firstVerifiedBy ? `<div><strong style="color:var(--color-text);">First verified:</strong> ${escapeHtml(s.firstVerifiedBy)} ${s.firstVerifiedAt ? '· ' + escapeHtml(s.firstVerifiedAt) : ''}</div>` : ''}
-            ${(s.verifiedBy && s.verifiedBy !== s.firstVerifiedBy) ? `<div><strong style="color:var(--color-text);">Last verified:</strong> ${escapeHtml(s.verifiedBy)} ${s.verifiedAt ? '· ' + escapeHtml(s.verifiedAt) : ''}</div>` : ''}
+          <div style="margin-top:16px; border:1px solid var(--color-border); border-radius:10px; overflow:hidden;">
+            <div style="background:var(--color-bg); padding:10px 14px; font-size:11px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; border-bottom:1px solid var(--color-border);">Verification History</div>
+            <div style="padding:14px; font-size:12px; color:var(--color-text); line-height:2;">
+              <div><strong>Verified Status:</strong> ${isDone ? 'Verified' : 'Pending'}</div>
+              ${s.firstVerifiedBy ? `<div><strong>First Verified at:</strong> ${escapeHtml(s.firstVerifiedAt)||'—'} and ${escapeHtml(s.firstVerifiedBy)}</div>` : ''}
+              ${s.verifiedBy ? `<div><strong>Last Verified at:</strong> ${escapeHtml(s.verifiedAt)||'—'} and ${escapeHtml(s.verifiedBy)}${getStatusSymbol(s)}</div>` : ''}
+            </div>
           </div>
         ` : ''}
         <div class="verify-controls">
