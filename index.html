@@ -1418,6 +1418,11 @@ function formatVerifierLabel(rawName, isAdmin){
 function formatVerificationHistory(r){
   if(!r.verifiedBy) return '';
 
+  const isAdminOrDemo = sessionStorage.getItem(ADMIN_KEY) === 'yes';
+  if(!isAdminOrDemo){
+    return `<div class="detail-item"><div class="lab">Verified Status</div><div class="val">Verified</div></div>`;
+  }
+
   const wasReverified = r.firstVerifiedBy && r.firstVerifiedBy !== r.verifiedBy;
 
   if(!wasReverified){
@@ -1440,7 +1445,7 @@ function formatVerificationHistory(r){
           <div style="font-size:11.5px; color:var(--color-text-muted); margin-top:2px;">${escapeHtml(r.firstVerifiedAt)}</div>
         </div>
         <div>
-          <div style="font-size:13px; font-weight:600; color:var(--color-text);">Most recently verified ${formatVerifierLabel(r.verifiedBy, r.verifiedByIsAdmin)}</div>
+          <div style="font-size:13px; font-weight:600; color:var(--color-text);">Most recently verified ${formatVerifierLabel(r.verifiedBy, r.verifiedByIsAdmin)} <span title="Overturned by admin">⚠️</span></div>
           <div style="font-size:11.5px; color:var(--color-text-muted); margin-top:2px;">${escapeHtml(r.verifiedAt)}</div>
         </div>
       </div>
@@ -1664,7 +1669,7 @@ function renderTable(){
       <td class="mono">${escapeHtml(r.machineCode)||'—'}</td>
       <td>${siteCodeTag(r.siteCode)}</td>
       <td>${escapeHtml(r.studentType)||'—'}</td>
-      <td><span class="status-pill ${r.status==='done'?'done':'pending'}">${r.status==='done'?'Verified':'Pending'}</span>${r.locked ? ' 🔒' : ''}</td>
+      <td><span class="status-pill ${r.status==='done'?'done':'pending'}">${r.status==='done'?'Verified':'Pending'}</span>${(r.status==='done' && r.firstVerifiedBy && r.firstVerifiedBy !== r.verifiedBy) ? ' <span title="Overturned by admin">⚠️</span>' : ''}${r.locked ? ' 🔒' : ''}</td>
     </tr>
   `).join('');
   roster.forEach(r => { previousRosterStatus[r.id] = r.status; });
