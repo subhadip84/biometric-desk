@@ -968,8 +968,10 @@ function renderDetail(s){
             <div style="background:var(--color-bg); padding:10px 14px; font-size:11px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; border-bottom:1px solid var(--color-border);">Verification History</div>
             <div style="padding:14px; font-size:12px; color:var(--color-text); line-height:2;">
               <div><strong>Verified Status:</strong> ${isDone ? 'Verified' : 'Pending'}</div>
-              ${s.firstVerifiedBy ? `<div><strong>First Verified at:</strong> ${escapeHtml(s.firstVerifiedAt)||'—'} and ${escapeHtml(s.firstVerifiedBy)}</div>` : ''}
-              ${s.verifiedBy ? `<div><strong>Last Verified at:</strong> ${escapeHtml(s.verifiedAt)||'—'} and ${escapeHtml(s.verifiedBy)}${getStatusSymbol(s)}</div>` : ''}
+              ${isAdminOrDemo ? `
+                ${s.firstVerifiedBy ? `<div><strong>First Verified at:</strong> ${escapeHtml(s.firstVerifiedAt)||'—'} and ${escapeHtml(s.firstVerifiedBy)}</div>` : ''}
+                ${s.verifiedBy ? `<div><strong>Last Verified at:</strong> ${escapeHtml(s.verifiedAt)||'—'} and ${escapeHtml(s.verifiedBy)}${getStatusSymbol(s)}</div>` : ''}
+              ` : ''}
             </div>
           </div>
         ` : ''}
