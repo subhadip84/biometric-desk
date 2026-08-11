@@ -4383,6 +4383,7 @@ async function submitHelpQuestion(){
     thinkingBubble.remove();
     if(data.ok){
       appendHelpMessage(data.answer, false);
+      runScript('logHelpQuestion', `[AI] ${text}`).catch(() => {});
     } else {
       appendHelpMessage("I couldn't reach the AI assistant just now — try one of the questions below, or contact AKC IT Support.", false);
     }
