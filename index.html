@@ -4279,11 +4279,15 @@ if(helpChatToggle){
   if(savedPos){
     try{
       const { left, top } = JSON.parse(savedPos);
-      helpChatToggle.style.left = left;
-      helpChatToggle.style.top = top;
-      helpChatToggle.style.right = 'auto';
-      helpChatToggle.style.bottom = 'auto';
-    }catch(e){ /* ignore malformed saved position */ }
+      if(left && top && left.trim() && top.trim()){
+        helpChatToggle.style.left = left;
+        helpChatToggle.style.top = top;
+        helpChatToggle.style.right = 'auto';
+        helpChatToggle.style.bottom = 'auto';
+      } else {
+        localStorage.removeItem('bioDeskHelpBtnPos');
+      }
+    }catch(e){ localStorage.removeItem('bioDeskHelpBtnPos'); }
   }
 
   let dragging = false;
@@ -4297,14 +4301,21 @@ if(helpChatToggle){
     startY = clientY;
     startLeft = rect.left;
     startTop = rect.top;
-    helpChatToggle.style.right = 'auto';
-    helpChatToggle.style.bottom = 'auto';
   }
   function onDragMove(clientX, clientY){
     if(!dragging) return;
     const dx = clientX - startX;
     const dy = clientY - startY;
-    if(Math.abs(dx) > 4 || Math.abs(dy) > 4) dragMoved = true;
+    if(Math.abs(dx) > 4 || Math.abs(dy) > 4){
+      if(!dragMoved){
+        // Only now, on confirmed movement, switch from right/bottom anchoring
+        // to left/top - doing this unconditionally on mousedown left the
+        // button with no valid position at all on a plain click.
+        helpChatToggle.style.right = 'auto';
+        helpChatToggle.style.bottom = 'auto';
+      }
+      dragMoved = true;
+    }
     if(!dragMoved) return;
     let newLeft = Math.max(4, Math.min(window.innerWidth - 56, startLeft + dx));
     let newTop = Math.max(4, Math.min(window.innerHeight - 56, startTop + dy));
