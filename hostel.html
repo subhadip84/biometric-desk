@@ -27,7 +27,7 @@
     --color-pending:#e0654a; --color-pending-soft:#2e1712;
     --color-border:#30363d; --color-text:#e6edf3; --color-text-muted:#8b949e;
   }
-  body.focus-mode #statsRowPanel, body.focus-mode #hostelSummaryPanel, body.focus-mode #hostelTrendChartPanel{
+  body.focus-mode #statsRowPanel, body.focus-mode #hostelSummaryPanel, body.focus-mode #hostelTrendChartPanel, body.focus-mode #hostelForecastPanel{
     display:none !important;
   }
   *{box-sizing:border-box;}
@@ -243,9 +243,32 @@
           <canvas id="hostelTrendChart"></canvas>
         </div>
       </div>
+
+      <div class="panel" id="hostelForecastPanel" style="margin-top:20px; display:none; text-align:center;">
+        <h2 style="margin:0 0 4px;">Projected Completion</h2>
+        <div style="font-size:11.5px; color:var(--color-text-muted); margin-bottom:14px;">Based on the current 7-day average face capture pace</div>
+        <div id="hostelForecastDate" style="font-family:var(--font-display); font-size:24px; font-weight:700; color:var(--color-success);">—</div>
+        <div id="hostelForecastDetail" style="font-size:12px; color:var(--color-text-muted); margin-top:6px;"></div>
+      </div>
     </div>
   </div>
 </main>
+
+<div id="helpChatToggle" style="position:fixed; bottom:24px; right:24px; width:52px; height:52px; border-radius:50%; background:var(--color-gold); color:var(--color-navy-deep); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; box-shadow:0 6px 18px rgba(0,0,0,.25); cursor:pointer; z-index:900;">?</div>
+
+<div id="helpChatPanel" style="display:none; position:fixed; bottom:88px; right:24px; width:310px; max-height:440px; background:#fff; border-radius:14px; box-shadow:0 14px 36px rgba(0,0,0,.22); overflow:hidden; z-index:900; flex-direction:column;">
+  <div style="background:var(--color-navy-deep); color:#fff; padding:12px 14px; display:flex; align-items:center; gap:8px;">
+    <div style="width:26px; height:26px; border-radius:50%; background:var(--color-gold); display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; color:var(--color-navy-deep); font-weight:700;">?</div>
+    <div style="font-size:13px; font-weight:600;">Help Assistant</div>
+    <span id="helpChatCloseBtn" style="margin-left:auto; font-size:16px; opacity:.8; cursor:pointer;">✕</span>
+  </div>
+  <div id="helpChatMessages" style="padding:12px 14px; display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto;"></div>
+  <div id="helpChatChips" style="padding:8px 12px; display:flex; flex-wrap:wrap; gap:6px; border-top:1px solid var(--color-border); max-height:110px; overflow-y:auto;"></div>
+  <div style="padding:10px 12px; border-top:1px solid var(--color-border); display:flex; gap:8px;">
+    <input type="text" id="helpChatInput" placeholder="Type a question…" style="flex:1; border:1px solid var(--color-border); border-radius:20px; padding:7px 12px; font-size:12.5px; font-family:var(--font-body); min-width:0;">
+    <button id="helpChatSendBtn" style="width:32px; height:32px; border-radius:50%; background:var(--color-navy); color:#fff; border:none; cursor:pointer; flex-shrink:0; font-size:14px;">➤</button>
+  </div>
+</div>
 
 <script>
 const SESSION_KEY = 'bioDeskLoggedIn';
@@ -275,6 +298,7 @@ if(isAdminOrDemo){
   document.getElementById('freshDataColumn').style.display = 'block';
   document.getElementById('hostelSummaryPanel').style.display = 'block';
   document.getElementById('hostelTrendChartPanel').style.display = 'block';
+  document.getElementById('hostelForecastPanel').style.display = 'block';
   ['hostelActivityLogBtn', 'downloadCsvBtn', 'importNewBtn', 'importVerifyBtn'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = 'block';
@@ -624,7 +648,7 @@ function renderStats(){
   const verifiedToday = hostel.filter(s => s.status === 'done' && s.verifiedAt && s.verifiedAt.indexOf(todayStr) === 0).length;
   document.getElementById('verifiedTodayCount').textContent = verifiedToday;
 
-  if(isAdminOrDemo){ renderHostelSummary(); renderHostelTrendChart(); }
+  if(isAdminOrDemo){ renderHostelSummary(); renderHostelTrendChart(); renderHostelForecast(); }
 }
 
 let hostelSummaryChartInstance = null;
@@ -731,6 +755,47 @@ function renderHostelTrendChart(){
       plugins: { legend: { display: false } }
     }
   });
+}
+
+function renderHostelForecast(){
+  const dateEl = document.getElementById('hostelForecastDate');
+  const detailEl = document.getElementById('hostelForecastDetail');
+  if(!dateEl || !detailEl) return;
+
+  const pendingCount = hostel.filter(s => s.status !== 'done').length;
+  if(pendingCount === 0){
+    dateEl.textContent = 'Complete';
+    detailEl.textContent = 'All hostel students have already been verified.';
+    return;
+  }
+
+  const days7 = [];
+  for(let i = 6; i >= 0; i--){
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days7.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+  const counts7 = {};
+  days7.forEach(d => counts7[d] = 0);
+  hostel.forEach(s => {
+    if(!s.verifiedAt) return;
+    const dayKey = s.verifiedAt.slice(0, 10);
+    if(counts7.hasOwnProperty(dayKey)) counts7[dayKey]++;
+  });
+  const totalLast7 = Object.values(counts7).reduce((a,b) => a+b, 0);
+  const avgPerDay = totalLast7 / 7;
+
+  if(avgPerDay <= 0){
+    dateEl.textContent = 'N/A';
+    detailEl.textContent = 'Not enough recent verification activity to forecast a completion date.';
+    return;
+  }
+
+  const daysRemaining = Math.ceil(pendingCount / avgPerDay);
+  const projected = new Date();
+  projected.setDate(projected.getDate() + daysRemaining);
+  dateEl.textContent = projected.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
+  detailEl.textContent = `${pendingCount} remaining · averaging ${avgPerDay.toFixed(1)}/day over the last 7 days`;
 }
 
 function downloadHostelDetailRecords(hostelName, statusFilter){
@@ -1303,6 +1368,177 @@ function showHostelImportModal(kind){
 
 document.getElementById('importNewBtn')?.addEventListener('click', () => showHostelImportModal('new'));
 document.getElementById('importVerifyBtn')?.addEventListener('click', () => showHostelImportModal('verify'));
+
+// --- Help Assistant: hostel-specific FAQ, falling back to the same AI assistant used by the main app ---
+const HOSTEL_HELP_FAQ = [
+  { question: 'How do I mark a student as Face Capture Done?', keywords: ['mark', 'done', 'verify', 'face capture'], answer: 'Search for the student, select them, then choose "Done" under "Mark face capture status". This locks the record automatically.' },
+  { question: 'How do I unlock a record?', keywords: ['unlock', 'change', 'edit locked'], answer: 'Open the student\'s detail card, click "Unlock (admin)" near the bottom, then enter the admin password. Only admin accounts can do this.' },
+  { question: 'How do I download a report?', keywords: ['download', 'csv', 'export', 'report'], answer: 'Open the Welcome menu (top right) and choose "Download Report (CSV)" - you can filter by Verified, Pending, or All.' },
+  { question: 'What does the 🏠 symbol mean?', keywords: ['house', 'symbol', 'icon', '🏠'], answer: 'It means this student was verified by a hosteller-only staff account, rather than an admin.' },
+  { question: 'What does the ⚠️ symbol mean?', keywords: ['warning', 'triangle', '⚠'], answer: 'It means this record was unlocked and changed again by an admin after its first verification - an overturn/correction.' }
+];
+
+function findHostelHelpAnswer(text){
+  const q = text.toLowerCase();
+  for(const item of HOSTEL_HELP_FAQ){
+    if(item.keywords.some(k => q.indexOf(k) !== -1)) return { answer: item.answer, matchedQuestion: item.question };
+  }
+  return { answer: "I don't have an answer for that yet — try one of the questions below, or contact AKC IT Support for anything else.", matchedQuestion: null };
+}
+
+function appendHelpMessage(text, fromUser){
+  const messagesEl = document.getElementById('helpChatMessages');
+  if(!messagesEl) return;
+  const bubble = document.createElement('div');
+  bubble.style.cssText = fromUser
+    ? 'background:var(--color-navy); color:#fff; border-radius:10px; padding:8px 10px; font-size:12px; align-self:flex-end; max-width:85%;'
+    : 'background:#F0F2F6; border-radius:10px; padding:8px 10px; font-size:12px; color:var(--color-navy-deep); align-self:flex-start; max-width:85%;';
+  bubble.textContent = text;
+  messagesEl.appendChild(bubble);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function renderHelpChips(){
+  const chipsEl = document.getElementById('helpChatChips');
+  if(!chipsEl) return;
+  chipsEl.innerHTML = HOSTEL_HELP_FAQ.map((item, i) => `<div class="help-chip" data-idx="${i}" style="font-size:11px; border:1px solid var(--color-border); border-radius:20px; padding:4px 10px; color:var(--color-navy-deep); cursor:pointer;">${escapeHtml(item.question)}</div>`).join('');
+  chipsEl.querySelectorAll('.help-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const item = HOSTEL_HELP_FAQ[Number(chip.dataset.idx)];
+      appendHelpMessage(item.question, true);
+      appendHelpMessage(item.answer, false);
+      runScript('logHelpQuestion', item.question).catch(() => {});
+    });
+  });
+}
+
+const helpChatToggle = document.getElementById('helpChatToggle');
+const helpChatPanel = document.getElementById('helpChatPanel');
+const helpChatCloseBtn = document.getElementById('helpChatCloseBtn');
+const helpChatInput = document.getElementById('helpChatInput');
+const helpChatSendBtn = document.getElementById('helpChatSendBtn');
+
+let helpDragMoved = false;
+if(helpChatToggle){
+  const savedPos = localStorage.getItem('bioDeskHelpBtnPos');
+  if(savedPos){
+    try{
+      const { left, top } = JSON.parse(savedPos);
+      if(left && top && left.trim() && top.trim()){
+        helpChatToggle.style.left = left;
+        helpChatToggle.style.top = top;
+        helpChatToggle.style.right = 'auto';
+        helpChatToggle.style.bottom = 'auto';
+      } else {
+        localStorage.removeItem('bioDeskHelpBtnPos');
+      }
+    }catch(e){ localStorage.removeItem('bioDeskHelpBtnPos'); }
+  }
+
+  let dragging = false;
+  let startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+  function onDragStart(clientX, clientY){
+    dragging = true;
+    helpDragMoved = false;
+    const rect = helpChatToggle.getBoundingClientRect();
+    startX = clientX;
+    startY = clientY;
+    startLeft = rect.left;
+    startTop = rect.top;
+  }
+  function onDragMove(clientX, clientY){
+    if(!dragging) return;
+    const dx = clientX - startX;
+    const dy = clientY - startY;
+    if(Math.abs(dx) > 4 || Math.abs(dy) > 4){
+      if(!helpDragMoved){
+        helpChatToggle.style.right = 'auto';
+        helpChatToggle.style.bottom = 'auto';
+      }
+      helpDragMoved = true;
+    }
+    if(!helpDragMoved) return;
+    let newLeft = Math.max(4, Math.min(window.innerWidth - 56, startLeft + dx));
+    let newTop = Math.max(4, Math.min(window.innerHeight - 56, startTop + dy));
+    helpChatToggle.style.left = newLeft + 'px';
+    helpChatToggle.style.top = newTop + 'px';
+  }
+  function onDragEnd(){
+    if(dragging && helpDragMoved){
+      localStorage.setItem('bioDeskHelpBtnPos', JSON.stringify({ left: helpChatToggle.style.left, top: helpChatToggle.style.top }));
+    }
+    dragging = false;
+  }
+
+  helpChatToggle.addEventListener('mousedown', (e) => onDragStart(e.clientX, e.clientY));
+  document.addEventListener('mousemove', (e) => onDragMove(e.clientX, e.clientY));
+  document.addEventListener('mouseup', onDragEnd);
+
+  helpChatToggle.addEventListener('touchstart', (e) => { const t = e.touches[0]; onDragStart(t.clientX, t.clientY); }, { passive: true });
+  document.addEventListener('touchmove', (e) => { const t = e.touches[0]; onDragMove(t.clientX, t.clientY); }, { passive: true });
+  document.addEventListener('touchend', onDragEnd);
+}
+
+if(helpChatToggle && helpChatPanel){
+  helpChatToggle.addEventListener('click', () => {
+    if(helpDragMoved){ helpDragMoved = false; return; }
+    const isOpen = helpChatPanel.style.display === 'flex';
+    if(isOpen){
+      helpChatPanel.style.display = 'none';
+    } else {
+      helpChatPanel.style.display = 'flex';
+      if(!document.getElementById('helpChatMessages').hasChildNodes()){
+        appendHelpMessage('Hi! Ask me how to use the Hostel Face Capture Desk, or tap a question below.', false);
+      }
+      renderHelpChips();
+    }
+  });
+}
+if(helpChatCloseBtn){
+  helpChatCloseBtn.addEventListener('click', () => { helpChatPanel.style.display = 'none'; });
+}
+
+async function submitHelpQuestion(){
+  const text = helpChatInput.value.trim();
+  if(!text) return;
+  appendHelpMessage(text, true);
+  helpChatInput.value = '';
+
+  const result = findHostelHelpAnswer(text);
+  if(result.matchedQuestion){
+    appendHelpMessage(result.answer, false);
+    runScript('logHelpQuestion', result.matchedQuestion).catch(() => {});
+    return;
+  }
+
+  const messagesEl = document.getElementById('helpChatMessages');
+  const thinkingBubble = document.createElement('div');
+  thinkingBubble.style.cssText = 'background:#F0F2F6; border-radius:10px; padding:8px 10px; font-size:12px; color:var(--color-text-muted); align-self:flex-start; max-width:85%; font-style:italic;';
+  thinkingBubble.textContent = 'Thinking…';
+  messagesEl.appendChild(thinkingBubble);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  try{
+    const data = await runScript('askAiHelpAssistant', text);
+    thinkingBubble.remove();
+    if(data.ok){
+      appendHelpMessage(data.answer, false);
+      runScript('logHelpQuestion', `[AI] ${text}`).catch(() => {});
+    } else {
+      appendHelpMessage("I couldn't reach the AI assistant just now — try one of the questions below, or contact AKC IT Support.", false);
+    }
+  }catch(err){
+    thinkingBubble.remove();
+    appendHelpMessage("I couldn't reach the AI assistant just now — try one of the questions below, or contact AKC IT Support.", false);
+  }
+}
+if(helpChatSendBtn){
+  helpChatSendBtn.addEventListener('click', submitHelpQuestion);
+}
+if(helpChatInput){
+  helpChatInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') submitHelpQuestion(); });
+}
 
 loadHostelData();
 loadFreshUploadInfo();
