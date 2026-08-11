@@ -2020,6 +2020,7 @@ function enterApp(){
   fetchStudents();
   resetInactivityTimer();
   startAutoRefresh();
+  startHeartbeat();
 }
 
 const USERID_KEY = 'bioDeskUserId';
@@ -2156,8 +2157,10 @@ function logout(reason, successMessage){
     const seconds = totalSeconds % 60;
     const durationText = hours > 0 ? `${hours}h ${minutes}m` : (minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`);
     const actorName = sessionStorage.getItem(USERNAME_KEY) || 'unknown';
-    runScript('logSessionEnd', actorName, durationText).catch(() => {});
+    const currentUserId = sessionStorage.getItem(USERID_KEY);
+    runScript('logSessionEnd', actorName, durationText, currentUserId).catch(() => {});
   }
+  stopHeartbeat();
 
   sessionStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(ADMIN_KEY);
@@ -2214,6 +2217,54 @@ function logout(reason, successMessage){
   }
   clearTimeout(inactivityTimer);
   stopAutoRefresh();
+}
+
+// Catches the case where someone closes the tab/browser entirely, without
+// clicking Logout or waiting for the 30-minute auto-logout. Regular fetch()
+// calls aren't reliably delivered during page unload, so this uses
+// sendBeacon, the browser's purpose-built API for exactly this scenario.
+window.addEventListener('pagehide', () => {
+  const wasLoggedIn = sessionStorage.getItem(SESSION_KEY) === 'yes';
+  const loginTimeStr = sessionStorage.getItem(LOGIN_TIME_KEY);
+  if(!wasLoggedIn || !loginTimeStr) return;
+
+  const durationMs = Date.now() - Number(loginTimeStr);
+  const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const durationText = hours > 0 ? `${hours}h ${minutes}m` : (minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`);
+  const actorName = sessionStorage.getItem(USERNAME_KEY) || 'unknown';
+  const currentUserId = sessionStorage.getItem(USERID_KEY);
+
+  const payload = new Blob(
+    [JSON.stringify({ fn: 'logSessionEnd', args: [actorName, durationText + ' (tab closed)', currentUserId] })],
+    { type: 'text/plain;charset=utf-8' }
+  );
+  navigator.sendBeacon(API_BASE_URL, payload);
+});
+
+// --- Heartbeat: periodic "still here" ping while logged in, so the server
+// can detect truly unexpected closes (crash, force-quit, power loss) that
+// give no JavaScript any chance to run at all, and log those sessions'
+// end properly instead of leaving it silently unrecorded. ---
+const HEARTBEAT_INTERVAL_MS = 3 * 60 * 1000; // every 3 minutes
+let heartbeatTimer = null;
+
+function startHeartbeat(){
+  stopHeartbeat();
+  const send = () => {
+    const currentUserId = sessionStorage.getItem(USERID_KEY);
+    const actorName = sessionStorage.getItem(USERNAME_KEY) || 'unknown';
+    if(!currentUserId) return;
+    runScript('recordHeartbeat', currentUserId, actorName).catch(() => {});
+  };
+  send(); // fire one immediately, don't wait for the first interval
+  heartbeatTimer = setInterval(send, HEARTBEAT_INTERVAL_MS);
+}
+function stopHeartbeat(){
+  clearInterval(heartbeatTimer);
+  heartbeatTimer = null;
 }
 
 function resetInactivityTimer(){
