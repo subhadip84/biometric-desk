@@ -1270,6 +1270,109 @@ async function downloadVerifiedTodayCsv(){
 }
 
 // --- Admin: bulk import modals (shared logic for both New Data and Verification Updates) ---
+function showHostelImportResultModal(added, skippedRows){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+
+  let skippedHtml = '';
+  if(skippedRows && skippedRows.length){
+    skippedHtml = `
+      <div style="font-size:12px; font-weight:600; color:var(--color-pending); text-transform:uppercase; letter-spacing:.3px; margin:14px 0 6px;">
+        ${skippedRows.length} row(s) skipped as duplicates
+      </div>
+      <div style="max-height:200px; overflow:auto; border:1px solid var(--color-border); border-radius:8px;">
+        <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
+          <thead>
+            <tr>
+              <th style="padding:6px 8px; background:var(--color-bg); text-align:left;">Name</th>
+              <th style="padding:6px 8px; background:var(--color-bg); text-align:left;">App No</th>
+              <th style="padding:6px 8px; background:var(--color-bg); text-align:left;">Reg No</th>
+              <th style="padding:6px 8px; background:var(--color-bg); text-align:left;">Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${skippedRows.map(s => `
+              <tr>
+                <td style="padding:6px 8px; border-top:1px solid var(--color-border);">${escapeHtml(s.name)}</td>
+                <td style="padding:6px 8px; border-top:1px solid var(--color-border); font-family:var(--font-mono);">${escapeHtml(s.appNo)||'—'}</td>
+                <td style="padding:6px 8px; border-top:1px solid var(--color-border); font-family:var(--font-mono);">${escapeHtml(s.regNo)||'—'}</td>
+                <td style="padding:6px 8px; border-top:1px solid var(--color-border); color:var(--color-pending);">${escapeHtml(s.reason)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:520px;">
+      <h3>Import Complete</h3>
+      <div style="font-size:13.5px; color:var(--color-text); margin-bottom:4px;">
+        <strong>${added}</strong> new student(s) added to the hostel sheet.
+      </div>
+      ${skippedHtml}
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="btn btn-primary" id="hirOkBtn" style="flex:1;">OK</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  const okBtn = overlay.querySelector('#hirOkBtn');
+  okBtn.addEventListener('click', () => overlay.remove());
+}
+
+function showHostelVerificationImportResultModal(updated, alreadyDone, notFoundRows){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+
+  let notFoundHtml = '';
+  if(notFoundRows && notFoundRows.length){
+    notFoundHtml = `
+      <div style="font-size:12px; font-weight:600; color:var(--color-pending); text-transform:uppercase; letter-spacing:.3px; margin:14px 0 6px;">
+        ${notFoundRows.length} row(s) not found in the hostel sheet
+      </div>
+      <div style="max-height:200px; overflow:auto; border:1px solid var(--color-border); border-radius:8px;">
+        <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
+          <thead>
+            <tr>
+              <th style="padding:6px 8px; background:var(--color-bg); text-align:left;">Name</th>
+              <th style="padding:6px 8px; background:var(--color-bg); text-align:left;">App No</th>
+              <th style="padding:6px 8px; background:var(--color-bg); text-align:left;">Reg No</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${notFoundRows.map(s => `
+              <tr>
+                <td style="padding:6px 8px; border-top:1px solid var(--color-border);">${escapeHtml(s.name)}</td>
+                <td style="padding:6px 8px; border-top:1px solid var(--color-border); font-family:var(--font-mono);">${escapeHtml(s.appNo)||'—'}</td>
+                <td style="padding:6px 8px; border-top:1px solid var(--color-border); font-family:var(--font-mono);">${escapeHtml(s.regNo)||'—'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:520px;">
+      <h3>Verification Updates Applied</h3>
+      <div style="font-size:13.5px; color:var(--color-text); line-height:1.6;">
+        <strong>${updated}</strong> student(s) marked Done.<br>
+        <strong>${alreadyDone}</strong> were already Done (left unchanged).
+      </div>
+      ${notFoundHtml}
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="btn btn-primary" id="hvirOkBtn" style="flex:1;">OK</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  const okBtn = overlay.querySelector('#hvirOkBtn');
+  okBtn.addEventListener('click', () => overlay.remove());
+}
+
 function showHostelImportModal(kind){
   const isNew = kind === 'new';
   const fnName = isNew ? 'importNewHostelData' : 'importHostelVerificationUpdates';
@@ -1467,9 +1570,9 @@ function showHostelImportModal(kind){
       await loadHostelData();
       await loadFreshUploadInfo();
       if(isNew){
-        showToast(`${data.added} added, ${data.skippedRows.length} skipped as duplicates.`, 'success');
+        showHostelImportResultModal(data.added, data.skippedRows || []);
       } else {
-        showToast(`${data.updated} updated, ${data.alreadyDone} already done, ${data.notFoundRows.length} not found.`, 'success');
+        showHostelVerificationImportResultModal(data.updated, data.alreadyDone, data.notFoundRows || []);
       }
     }catch(err){
       errEl.textContent = err.message;
