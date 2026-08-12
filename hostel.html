@@ -1275,58 +1275,153 @@ function showHostelImportModal(kind){
   const fnName = isNew ? 'importNewHostelData' : 'importHostelVerificationUpdates';
   const title = isNew ? 'Import New Hostel Data' : 'Import Face Capture Updates';
   const desc = isNew
-    ? 'Upload an Excel/CSV file with new hostel students. Duplicate App No/Reg No are skipped automatically.'
-    : 'Upload a face-capture machine report. Matching students are marked Done and locked automatically.';
+    ? 'Upload an Excel (.xlsx) or CSV file with the new hostel registrations. Columns are matched automatically — names like "Application No", "Roll Number", "Registration Number", etc. are all recognized. Duplicate App No/Reg No are skipped automatically.'
+    : 'Upload a face-capture machine report (Excel or CSV). Matching students are marked Done and locked automatically.';
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:420px;">
+    <div class="modal-box" style="max-width:520px;">
       <h3>${title}</h3>
-      <p style="font-size:12px; color:var(--color-text-muted); margin:0 0 12px;">${desc}</p>
-      <input type="file" id="hFileInput" accept=".xlsx,.xls,.csv" style="margin-bottom:10px;">
-      <div id="hPreview" style="font-size:12px; color:var(--color-text-muted);"></div>
-      <input type="password" id="hAdminPwd" placeholder="Admin password" autocomplete="off" style="display:none; margin-top:8px;">
-      <div class="modal-error" id="hErr"></div>
-      <div id="hProgressWrap" style="display:none; margin-bottom:14px;">
-        <div style="background:var(--color-bg); border-radius:20px; height:32px; overflow:hidden; position:relative;">
-          <div id="hProgressBar" style="position:absolute; top:0; bottom:0; left:0; width:0%; background:var(--color-navy); border-radius:20px; transition:width .15s ease;"></div>
-          <div id="hProgressLabel" style="position:relative; z-index:1; height:100%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:600;">Uploading… 0%</div>
+      <p style="font-size:12.5px; color:var(--color-text-muted); margin:0 0 10px;">${desc}</p>
+      <input type="file" id="hFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
+      <button type="button" id="hFileTriggerBtn" style="width:100%; padding:10px 14px; border-radius:8px; border:1.5px dashed var(--color-border); background:#fff; cursor:pointer; font-size:13px; color:var(--color-navy); margin-bottom:10px; text-align:center;">Choose file to upload</button>
+      <div id="hReadProgressWrap" style="display:none; margin-bottom:10px;">
+        <div style="background:var(--color-bg); border-radius:20px; height:8px; overflow:hidden;">
+          <div id="hReadProgressBar" style="background:var(--color-gold); height:100%; width:0%; transition:width .15s ease;"></div>
+        </div>
+        <div id="hReadProgressLabel" style="font-size:11.5px; color:var(--color-text-muted); margin-top:4px; text-align:center;">Reading file… 0%</div>
+      </div>
+      <div id="hPreviewArea"></div>
+      <input type="password" id="hAdminPwd" placeholder="Admin password (to authorize)" autocomplete="off" style="display:none; margin-top:10px; width:100%; box-sizing:border-box;">
+      <div class="modal-error" id="hErr" style="margin-top:8px;"></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="hSubmit" style="flex:1; display:none;">${isNew ? 'Import' : 'Apply Updates'}</button>
+        <div id="hSubmitProgressWrap" style="display:none; flex:1;">
+          <div style="background:var(--color-bg); border-radius:20px; height:36px; overflow:hidden; position:relative;">
+            <div id="hSubmitProgressBar" style="position:absolute; top:0; bottom:0; background:var(--color-navy); border-radius:20px; width:0%; transition:width .15s ease;"></div>
+            <div id="hSubmitProgressLabel" style="position:relative; z-index:1; height:100%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px; font-weight:600;">Uploading…</div>
+          </div>
         </div>
       </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" id="hCancel">Cancel</button>
-        <button class="btn btn-primary" id="hSubmit" style="display:none;">${isNew ? 'Import' : 'Apply Updates'}</button>
-      </div>
+      <button class="btn btn-ghost" id="hCancel" style="width:100%; margin-top:8px;">Close</button>
     </div>`;
   document.body.appendChild(overlay);
 
   const fileInput = overlay.querySelector('#hFileInput');
-  const preview = overlay.querySelector('#hPreview');
+  const fileTriggerBtn = overlay.querySelector('#hFileTriggerBtn');
+  const readProgressWrap = overlay.querySelector('#hReadProgressWrap');
+  const readProgressBar = overlay.querySelector('#hReadProgressBar');
+  const readProgressLabel = overlay.querySelector('#hReadProgressLabel');
+  const previewArea = overlay.querySelector('#hPreviewArea');
   const pwdInput = overlay.querySelector('#hAdminPwd');
   const errEl = overlay.querySelector('#hErr');
   const submitBtn = overlay.querySelector('#hSubmit');
   const cancelBtn = overlay.querySelector('#hCancel');
-  const progressWrap = overlay.querySelector('#hProgressWrap');
-  const progressBar = overlay.querySelector('#hProgressBar');
-  const progressLabel = overlay.querySelector('#hProgressLabel');
 
   let parsedHeaders = null, parsedRows = null;
   function close(){ overlay.remove(); }
 
+  fileTriggerBtn.addEventListener('click', () => fileInput.click());
+
+  ['dragover', 'dragenter'].forEach(evt => {
+    fileTriggerBtn.addEventListener(evt, (e) => {
+      e.preventDefault();
+      fileTriggerBtn.style.borderColor = 'var(--color-navy)';
+      fileTriggerBtn.style.background = 'var(--color-bg)';
+    });
+  });
+  ['dragleave', 'dragend'].forEach(evt => {
+    fileTriggerBtn.addEventListener(evt, () => {
+      fileTriggerBtn.style.borderColor = 'var(--color-border)';
+      fileTriggerBtn.style.background = '#fff';
+    });
+  });
+  fileTriggerBtn.addEventListener('drop', (e) => {
+    e.preventDefault();
+    fileTriggerBtn.style.borderColor = 'var(--color-border)';
+    fileTriggerBtn.style.background = '#fff';
+    if(e.dataTransfer.files.length){
+      fileInput.files = e.dataTransfer.files;
+      fileInput.dispatchEvent(new Event('change'));
+    }
+  });
+
   fileInput.addEventListener('change', () => {
+    errEl.textContent = '';
+    previewArea.innerHTML = '';
+    parsedHeaders = null;
+    parsedRows = null;
+    submitBtn.style.display = 'none';
+    pwdInput.style.display = 'none';
+
     const file = fileInput.files[0];
     if(!file) return;
+
+    fileTriggerBtn.textContent = file.name;
+    readProgressWrap.style.display = 'block';
+    readProgressBar.style.width = '0%';
+    readProgressLabel.textContent = 'Reading file… 0%';
+
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onprogress = (e) => {
+      if(e.lengthComputable){
+        const pct = Math.round((e.loaded / e.total) * 100);
+        readProgressBar.style.width = pct + '%';
+        readProgressLabel.textContent = `Reading file… ${pct}%`;
+      }
+    };
+    reader.onload = async (e) => {
+      readProgressBar.style.width = '100%';
+      readProgressLabel.textContent = 'Upload complete';
+      fileTriggerBtn.textContent = `✓ ${file.name}`;
       try{
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+        if(!rows.length){
+          errEl.textContent = 'That file appears to be empty.';
+          return;
+        }
+
         parsedHeaders = rows[0].map(h => String(h || ''));
-        parsedRows = rows.slice(1).filter(r => r.some(c => String(c||'').trim() !== ''));
-        preview.textContent = `${parsedRows.length} row(s) detected.`;
+        parsedRows = rows.slice(1).filter(r => r.some(cell => String(cell || '').trim() !== ''));
+
+        if(!parsedRows.length){
+          errEl.textContent = 'No data rows found below the header row.';
+          return;
+        }
+
+        const previewRows = parsedRows.slice(0, 5);
+
+        let warningHtml = '';
+        try{
+          const validation = await runScript('validateImportRows', parsedHeaders, parsedRows);
+          if(validation.ok && validation.missingBothCount > 0){
+            warningHtml = `
+              <div style="background:var(--color-pending-soft); color:var(--color-pending); border-radius:7px; padding:9px 12px; font-size:12px; margin-bottom:10px;">
+                ⚠ ${validation.missingBothCount} row(s) are missing both Application No and Registration Number — these likely won't import reliably.
+              </div>
+            `;
+          }
+        }catch(valErr){ /* validation is best-effort; don't block preview if it fails */ }
+
+        previewArea.innerHTML = `
+          ${warningHtml}
+          <div style="font-size:12.5px; color:var(--color-text); margin-bottom:6px;">
+            <strong>${parsedRows.length}</strong> data row(s) detected. Showing first ${previewRows.length}:
+          </div>
+          <div style="max-height:180px; overflow:auto; border:1px solid var(--color-border); border-radius:8px;">
+            <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
+              <thead><tr>${parsedHeaders.map(h => `<th style="padding:6px 8px; background:var(--color-bg); text-align:left; white-space:nowrap;">${escapeHtml(h)}</th>`).join('')}</tr></thead>
+              <tbody>
+                ${previewRows.map(r => `<tr>${parsedHeaders.map((h, i) => `<td style="padding:6px 8px; border-top:1px solid var(--color-border); white-space:nowrap;">${escapeHtml(String(r[i] !== undefined ? r[i] : ''))}</td>`).join('')}</tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
         pwdInput.style.display = 'block';
         submitBtn.style.display = 'block';
       }catch(err){
@@ -1336,24 +1431,37 @@ function showHostelImportModal(kind){
     reader.readAsArrayBuffer(file);
   });
 
-  submitBtn.addEventListener('click', async () => {
+  async function submitHostelImport(){
     errEl.textContent = '';
-    if(!parsedRows || !pwdInput.value){ errEl.textContent = 'Choose a file and enter the admin password.'; return; }
+    if(!parsedRows || !parsedRows.length){ errEl.textContent = 'Choose a file first.'; return; }
+    if(!pwdInput.value){ errEl.textContent = 'Enter the admin password to authorize the import.'; return; }
+
+    const confirmMsg = isNew
+      ? `Import ${parsedRows.length} row(s) into the hostel sheet? Duplicate Registration/Application numbers will be skipped automatically.`
+      : `Apply face capture updates for ${parsedRows.length} row(s)? Matching students will be marked Done and locked.`;
+    const confirmed = await showConfirmModal(confirmMsg, 'Confirm Import');
+    if(!confirmed) return;
+
+    const submitProgressWrap = overlay.querySelector('#hSubmitProgressWrap');
+    const submitProgressLabel = overlay.querySelector('#hSubmitProgressLabel');
+    const submitProgressBar = overlay.querySelector('#hSubmitProgressBar');
     submitBtn.style.display = 'none';
+    submitProgressWrap.style.display = 'block';
+    submitProgressBar.style.background = 'var(--color-navy)';
+    submitProgressBar.style.width = '0%';
+    submitProgressLabel.textContent = 'Uploading… 0%';
     fileInput.disabled = true; pwdInput.disabled = true;
-    progressWrap.style.display = 'block';
-    progressBar.style.width = '0%';
-    progressLabel.textContent = 'Uploading… 0%';
+
     try{
       const actor = sessionStorage.getItem(USERNAME_KEY) || 'Admin';
       const data = await runScriptWithProgress(fnName, [parsedHeaders, parsedRows, pwdInput.value, actor], (pct, uploadDone) => {
-        progressBar.style.width = pct + '%';
-        progressLabel.textContent = uploadDone ? 'Processing…' : `Uploading… ${pct}%`;
+        submitProgressBar.style.width = pct + '%';
+        submitProgressLabel.textContent = uploadDone ? 'Processing…' : `Uploading… ${pct}%`;
       });
       if(!data.ok) throw new Error(data.error || 'Import failed.');
-      progressLabel.textContent = 'Upload complete';
-      progressBar.style.width = '100%';
-      progressBar.style.background = 'var(--color-success)';
+      submitProgressLabel.textContent = 'Upload complete';
+      submitProgressBar.style.width = '100%';
+      submitProgressBar.style.background = 'var(--color-success)';
       await new Promise(res => setTimeout(res, 500));
       close();
       await loadHostelData();
@@ -1365,13 +1473,14 @@ function showHostelImportModal(kind){
       }
     }catch(err){
       errEl.textContent = err.message;
-      progressWrap.style.display = 'none';
+      submitProgressWrap.style.display = 'none';
       submitBtn.style.display = 'block';
       fileInput.disabled = false; pwdInput.disabled = false;
     }
-  });
+  }
 
   cancelBtn.addEventListener('click', close);
+  submitBtn.addEventListener('click', submitHostelImport);
 }
 
 document.getElementById('importNewBtn')?.addEventListener('click', () => showHostelImportModal('new'));
