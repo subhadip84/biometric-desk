@@ -1899,6 +1899,17 @@ if(voiceCommandBtn){
           showToast(`No student found matching "${parsed.identifier}"`, 'error');
           return;
         }
+
+        if(parsed.action === 'search'){
+          if(matches.length === 1){
+            selectStudent(matches[0].id);
+          } else {
+            searchInput.value = parsed.identifier;
+            searchInput.dispatchEvent(new Event('input'));
+          }
+          return;
+        }
+
         if(matches.length > 1){
           showToast(`"${parsed.identifier}" matches ${matches.length} students — say a more specific App No or Reg No.`, 'error');
           return;
