@@ -27,7 +27,7 @@
     --color-pending:#e0654a; --color-pending-soft:#2e1712;
     --color-border:#30363d; --color-text:#e6edf3; --color-text-muted:#8b949e;
   }
-  body.focus-mode #statsRowPanel, body.focus-mode #hostelSummaryPanel, body.focus-mode #hostelTrendChartPanel, body.focus-mode #hostelForecastPanel{
+  body.focus-mode #statsRowPanel, body.focus-mode #hostelSummaryPanel, body.focus-mode #hostelTrendChartPanel, body.focus-mode #hostelForecastPanel, body.focus-mode #hostelUnusualActivityPanel{
     display:none !important;
   }
   *{box-sizing:border-box;}
@@ -54,7 +54,7 @@
   .panel + .panel{ margin-top:16px; }
   .panel h2{ font-family:var(--font-display); font-size:15px; margin:0 0 12px; color:var(--color-navy-deep); }
   .search-box{ position:relative; }
-  .search-box input{ width:100%; padding:11px 12px 11px 36px; border-radius:8px; border:1px solid var(--color-border); font-size:12.5px; font-family:var(--font-mono); box-sizing:border-box; }
+  .search-box input{ width:100%; padding:11px 38px 11px 36px; border-radius:8px; border:1px solid var(--color-border); font-size:12.5px; font-family:var(--font-mono); box-sizing:border-box; }
   .search-box input::placeholder{ color:var(--color-text-muted); opacity:.85; }
   .search-box svg{ position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:.45; pointer-events:none; }
   .stat-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:14px; }
@@ -163,6 +163,7 @@
         <div class="search-box">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1D2430" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
           <input type="text" id="searchInput" placeholder="App No/Reg No/Machine Code/Name" autocomplete="off">
+          <button type="button" id="voiceCommandBtn" title="Voice command — e.g. &quot;mark APP-2026-1234 as verified&quot;" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); width:26px; height:26px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/></svg></button>
         </div>
         <div style="font-size:11.5px; color:var(--color-text-muted); margin-top:6px;">Type any part of Application/Roll No, Registration Number, Machine Code, or name — then press Enter or Search.</div>
         <div id="suggestions"></div>
@@ -251,6 +252,12 @@
         <div id="hostelForecastDate" style="font-family:var(--font-display); font-size:24px; font-weight:700; color:var(--color-success);">—</div>
         <div id="hostelForecastDetail" style="font-size:12px; color:var(--color-text-muted); margin-top:6px;"></div>
       </div>
+
+      <div class="panel" id="hostelUnusualActivityPanel" style="margin-top:20px; display:none;">
+        <h2 style="margin:0 0 4px;">Worth a Glance</h2>
+        <div style="font-size:11.5px; color:var(--color-text-muted); margin-bottom:12px;">Unusual patterns from the last 7 days — not accusations, just things worth a second look</div>
+        <div id="hostelUnusualActivityContent"></div>
+      </div>
     </div>
   </div>
 </main>
@@ -307,6 +314,7 @@ if(isAdminOrDemo){
   document.getElementById('hostelSummaryPanel').style.display = 'block';
   document.getElementById('hostelTrendChartPanel').style.display = 'block';
   document.getElementById('hostelForecastPanel').style.display = 'block';
+  document.getElementById('hostelUnusualActivityPanel').style.display = 'block';
   ['hostelActivityLogBtn', 'downloadCsvBtn', 'importNewBtn', 'importVerifyBtn'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = 'block';
@@ -656,7 +664,7 @@ function renderStats(){
   const verifiedToday = hostel.filter(s => s.status === 'done' && s.verifiedAt && s.verifiedAt.indexOf(todayStr) === 0).length;
   document.getElementById('verifiedTodayCount').textContent = verifiedToday;
 
-  if(isAdminOrDemo){ renderHostelSummary(); renderHostelTrendChart(); renderHostelForecast(); }
+  if(isAdminOrDemo){ renderHostelSummary(); renderHostelTrendChart(); renderHostelForecast(); renderHostelUnusualActivity(); }
 }
 
 let hostelSummaryChartInstance = null;
@@ -804,6 +812,34 @@ function renderHostelForecast(){
   projected.setDate(projected.getDate() + daysRemaining);
   dateEl.textContent = projected.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
   detailEl.textContent = `${pendingCount} remaining · averaging ${avgPerDay.toFixed(1)}/day over the last 7 days`;
+}
+
+async function renderHostelUnusualActivity(){
+  const contentEl = document.getElementById('hostelUnusualActivityContent');
+  if(!contentEl) return;
+  contentEl.innerHTML = `<div style="font-size:12px; color:var(--color-text-muted);">Checking…</div>`;
+  try{
+    const data = await runScript('getUnusualActivityFlags');
+    if(!data.ok || !data.flags.length){
+      contentEl.innerHTML = `<div style="font-size:12.5px; color:var(--color-text-muted);">Nothing unusual in the last 7 days.</div>`;
+      return;
+    }
+    contentEl.innerHTML = data.flags.map(f => {
+      const icon = f.type === 'burst' ? '⚡' : '🌙';
+      const label = f.type === 'burst' ? 'High-volume burst' : 'Off-hours activity';
+      return `
+        <div style="display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-top:1px solid var(--color-border);">
+          <span style="font-size:16px;">${icon}</span>
+          <div>
+            <div style="font-size:12.5px; font-weight:600; color:var(--color-text);">${label} — ${escapeHtml(f.actor)}</div>
+            <div style="font-size:11.5px; color:var(--color-text-muted); margin-top:2px;">${escapeHtml(f.detail)}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }catch(err){
+    contentEl.innerHTML = `<div style="font-size:12px; color:var(--color-text-muted);">Could not check for unusual activity right now.</div>`;
+  }
 }
 
 function downloadHostelDetailRecords(hostelName, statusFilter){
@@ -1813,6 +1849,85 @@ if(helpChatMicBtn){
     helpChatMicBtn.title = 'Voice input is not supported in this browser';
     helpChatMicBtn.style.opacity = '.4';
     helpChatMicBtn.style.cursor = 'not-allowed';
+  }
+}
+
+// --- Voice commands: speak an instruction, AI parses intent only - the
+// actual student record is looked up locally against real data, and
+// nothing ever executes without an explicit confirmation click. ---
+const voiceCommandBtn = document.getElementById('voiceCommandBtn');
+if(voiceCommandBtn){
+  const VoiceCmdApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(VoiceCmdApi){
+    const cmdRecognizer = new VoiceCmdApi();
+    cmdRecognizer.lang = 'en-IN';
+    cmdRecognizer.interimResults = false;
+    let cmdListening = false;
+
+    voiceCommandBtn.addEventListener('click', () => {
+      if(cmdListening) return;
+      cmdListening = true;
+      voiceCommandBtn.style.background = 'var(--color-pending-soft)';
+      voiceCommandBtn.style.color = 'var(--color-pending)';
+      voiceCommandBtn.style.animation = 'micPulse 1s ease-in-out infinite';
+      try{ cmdRecognizer.start(); }catch(e){ /* already started */ }
+    });
+
+    function resetVoiceCommandBtn(){
+      cmdListening = false;
+      voiceCommandBtn.style.background = 'var(--color-bg)';
+      voiceCommandBtn.style.color = 'var(--color-navy)';
+      voiceCommandBtn.style.animation = 'none';
+    }
+    cmdRecognizer.addEventListener('end', resetVoiceCommandBtn);
+    cmdRecognizer.addEventListener('error', resetVoiceCommandBtn);
+
+    cmdRecognizer.addEventListener('result', async (e) => {
+      const transcript = e.results[0][0].transcript;
+      try{
+        const parsed = await runScript('parseVoiceCommand', transcript);
+        if(!parsed.ok){
+          showToast('Voice command service is unavailable right now.', 'error');
+          return;
+        }
+        if(parsed.action === 'unknown' || !parsed.identifier){
+          showToast(`Didn't catch a clear command in "${transcript}"`, 'error');
+          return;
+        }
+        const matches = findMatches(parsed.identifier);
+        if(!matches.length){
+          showToast(`No student found matching "${parsed.identifier}"`, 'error');
+          return;
+        }
+        if(matches.length > 1){
+          showToast(`"${parsed.identifier}" matches ${matches.length} students — say a more specific App No or Reg No.`, 'error');
+          return;
+        }
+        const student = matches[0];
+        const targetStatus = parsed.action === 'mark_verified' ? 'done' : 'pending';
+        const targetLabel = targetStatus === 'done' ? 'Verified' : 'Pending';
+        if(student.status === targetStatus){
+          showToast(`${student.studentName} is already marked ${targetLabel}.`, 'error');
+          return;
+        }
+        const confirmed = await showConfirmModal(
+          `Mark ${student.studentName} (${student.applicationNo || student.registrationNo}) as ${targetLabel}?`,
+          'Confirm Voice Command'
+        );
+        if(!confirmed) return;
+        const currentUserId = sessionStorage.getItem(USERID_KEY) || 'unknown';
+        const data = await runScript('updateHostelStatus', student.id, targetStatus, currentUserId);
+        if(!data.ok) throw new Error(data.error || 'Update failed.');
+        await loadHostelData();
+        showToast(`${student.studentName} marked ${targetLabel}.`, 'success');
+      }catch(err){
+        showToast(err.message || 'Voice command failed.', 'error');
+      }
+    });
+  } else {
+    voiceCommandBtn.title = 'Voice commands are not supported in this browser';
+    voiceCommandBtn.style.opacity = '.4';
+    voiceCommandBtn.style.cursor = 'not-allowed';
   }
 }
 
