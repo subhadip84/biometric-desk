@@ -256,16 +256,23 @@
 
 <div id="helpChatToggle" style="position:fixed; bottom:24px; right:24px; width:52px; height:52px; border-radius:50%; background:var(--color-gold); color:var(--color-navy-deep); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; box-shadow:0 6px 18px rgba(0,0,0,.25); cursor:pointer; z-index:900;">?</div>
 
-<div id="helpChatPanel" style="display:none; position:fixed; bottom:88px; right:24px; width:310px; max-height:440px; background:#fff; border-radius:14px; box-shadow:0 14px 36px rgba(0,0,0,.22); overflow:hidden; z-index:900; flex-direction:column;">
-  <div style="background:var(--color-navy-deep); color:#fff; padding:12px 14px; display:flex; align-items:center; gap:8px;">
+<div id="helpChatPanel" style="display:none; position:fixed; bottom:88px; right:24px; width:310px; max-height:460px; background:#fff; border-radius:14px; box-shadow:0 14px 36px rgba(0,0,0,.22); overflow:visible; z-index:900; flex-direction:column;">
+  <div style="background:var(--color-navy-deep); color:#fff; padding:12px 14px; display:flex; align-items:center; gap:8px; border-radius:14px 14px 0 0; position:relative;">
     <div style="width:26px; height:26px; border-radius:50%; background:var(--color-gold); display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; color:var(--color-navy-deep); font-weight:700;">?</div>
     <div style="font-size:13px; font-weight:600;">Help Assistant</div>
-    <span id="helpChatCloseBtn" style="margin-left:auto; font-size:16px; opacity:.8; cursor:pointer;">✕</span>
+    <span id="helpChatMenuBtn" style="margin-left:auto; font-size:17px; opacity:.85; cursor:pointer; padding:2px 6px;">⋮</span>
+    <span id="helpChatCloseBtn" style="font-size:16px; opacity:.8; cursor:pointer;">✕</span>
+    <div id="helpChatMenu" style="display:none; position:absolute; top:38px; right:14px; background:#fff; border-radius:10px; box-shadow:0 10px 28px rgba(0,0,0,.25); overflow:hidden; z-index:950; min-width:160px;">
+      <div class="help-menu-item" id="helpMenuNewChat" style="padding:10px 14px; font-size:12.5px; color:var(--color-text); cursor:pointer; display:flex; align-items:center; gap:8px;">🆕 Start New Chat</div>
+      <div class="help-menu-item" id="helpMenuViewChat" style="padding:10px 14px; font-size:12.5px; color:var(--color-text); cursor:pointer; display:flex; align-items:center; gap:8px; border-top:1px solid var(--color-border);">📜 View Chat</div>
+      <div class="help-menu-item" id="helpMenuEndChat" style="padding:10px 14px; font-size:12.5px; color:var(--color-pending); cursor:pointer; display:flex; align-items:center; gap:8px; border-top:1px solid var(--color-border);">⏹ End Chat</div>
+    </div>
   </div>
   <div id="helpChatMessages" style="padding:12px 14px; display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto;"></div>
   <div id="helpChatChips" style="padding:8px 12px; display:flex; flex-wrap:wrap; gap:6px; border-top:1px solid var(--color-border); max-height:110px; overflow-y:auto;"></div>
-  <div style="padding:10px 12px; border-top:1px solid var(--color-border); display:flex; gap:8px;">
-    <input type="text" id="helpChatInput" placeholder="Type a question…" style="flex:1; border:1px solid var(--color-border); border-radius:20px; padding:7px 12px; font-size:12.5px; font-family:var(--font-body); min-width:0;">
+  <div style="padding:10px 12px; border-top:1px solid var(--color-border); display:flex; gap:6px; align-items:center;">
+    <input type="text" id="helpChatInput" placeholder="Ask me anything…" style="flex:1; border:1px solid var(--color-border); border-radius:20px; padding:7px 12px; font-size:12.5px; font-family:var(--font-body); min-width:0;">
+    <button id="helpChatMicBtn" title="Voice input" style="width:32px; height:32px; border-radius:50%; background:var(--color-bg); color:var(--color-navy); border:1px solid var(--color-border); cursor:pointer; flex-shrink:0; font-size:14px;">🎤</button>
     <button id="helpChatSendBtn" style="width:32px; height:32px; border-radius:50%; background:var(--color-navy); color:#fff; border:none; cursor:pointer; flex-shrink:0; font-size:14px;">➤</button>
   </div>
 </div>
@@ -1417,6 +1424,9 @@ const helpChatPanel = document.getElementById('helpChatPanel');
 const helpChatCloseBtn = document.getElementById('helpChatCloseBtn');
 const helpChatInput = document.getElementById('helpChatInput');
 const helpChatSendBtn = document.getElementById('helpChatSendBtn');
+const helpChatMicBtn = document.getElementById('helpChatMicBtn');
+const helpChatMenuBtn = document.getElementById('helpChatMenuBtn');
+const helpChatMenu = document.getElementById('helpChatMenu');
 
 let helpDragMoved = false;
 if(helpChatToggle){
@@ -1496,7 +1506,101 @@ if(helpChatToggle && helpChatPanel){
   });
 }
 if(helpChatCloseBtn){
-  helpChatCloseBtn.addEventListener('click', () => { helpChatPanel.style.display = 'none'; });
+  helpChatCloseBtn.addEventListener('click', () => { helpChatPanel.style.display = 'none'; helpChatMenu.style.display = 'none'; });
+}
+
+// --- Three-dot menu: Start New Chat / View Chat / End Chat ---
+if(helpChatMenuBtn && helpChatMenu){
+  helpChatMenuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    helpChatMenu.style.display = helpChatMenu.style.display === 'block' ? 'none' : 'block';
+  });
+  document.addEventListener('click', () => { helpChatMenu.style.display = 'none'; });
+}
+
+function startNewHelpChat(){
+  const messagesEl = document.getElementById('helpChatMessages');
+  messagesEl.innerHTML = '';
+  appendHelpMessage('Hi! Ask me how to use the Hostel Face Capture Desk, or tap a question below.', false);
+  renderHelpChips();
+  const actorName = sessionStorage.getItem(USERNAME_KEY) || 'unknown';
+  runScript('logHelpChatEvent', actorName, 'Started New Chat').catch(() => {});
+  helpChatMenu.style.display = 'none';
+}
+
+function showHelpChatHistoryModal(){
+  const messagesEl = document.getElementById('helpChatMessages');
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:420px;">
+      <h3>Chat History</h3>
+      <div id="helpHistoryContent" style="display:flex; flex-direction:column; gap:8px; max-height:400px; overflow-y:auto; margin-bottom:14px;"></div>
+      <button class="btn btn-ghost" id="helpHistoryCloseBtn" style="width:100%;">Close</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  const historyContent = overlay.querySelector('#helpHistoryContent');
+  Array.from(messagesEl.children).forEach(bubble => {
+    const clone = bubble.cloneNode(true);
+    historyContent.appendChild(clone);
+  });
+  if(!historyContent.hasChildNodes()){
+    historyContent.innerHTML = `<div class="search-hint">No messages yet in this chat.</div>`;
+  }
+  overlay.querySelector('#helpHistoryCloseBtn').addEventListener('click', () => overlay.remove());
+  helpChatMenu.style.display = 'none';
+}
+
+function endHelpChat(){
+  const actorName = sessionStorage.getItem(USERNAME_KEY) || 'unknown';
+  runScript('logHelpChatEvent', actorName, 'Ended Chat').catch(() => {});
+  document.getElementById('helpChatMessages').innerHTML = '';
+  helpChatPanel.style.display = 'none';
+  helpChatMenu.style.display = 'none';
+}
+
+const helpMenuNewChat = document.getElementById('helpMenuNewChat');
+if(helpMenuNewChat) helpMenuNewChat.addEventListener('click', startNewHelpChat);
+const helpMenuViewChat = document.getElementById('helpMenuViewChat');
+if(helpMenuViewChat) helpMenuViewChat.addEventListener('click', showHelpChatHistoryModal);
+const helpMenuEndChat = document.getElementById('helpMenuEndChat');
+if(helpMenuEndChat) helpMenuEndChat.addEventListener('click', endHelpChat);
+
+// --- Mic button: voice input via the Web Speech API (Chrome/Edge support it) ---
+if(helpChatMicBtn){
+  const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(SpeechRecognitionApi){
+    const recognizer = new SpeechRecognitionApi();
+    recognizer.lang = 'en-IN';
+    recognizer.interimResults = false;
+    let listening = false;
+
+    helpChatMicBtn.addEventListener('click', () => {
+      if(listening) return;
+      listening = true;
+      helpChatMicBtn.style.background = 'var(--color-pending-soft)';
+      helpChatMicBtn.style.color = 'var(--color-pending)';
+      helpChatMicBtn.textContent = '●';
+      try{ recognizer.start(); }catch(e){ /* already started */ }
+    });
+    recognizer.addEventListener('result', (e) => {
+      const transcript = e.results[0][0].transcript;
+      helpChatInput.value = transcript;
+    });
+    function resetMicButton(){
+      listening = false;
+      helpChatMicBtn.style.background = 'var(--color-bg)';
+      helpChatMicBtn.style.color = 'var(--color-navy)';
+      helpChatMicBtn.textContent = '🎤';
+    }
+    recognizer.addEventListener('end', resetMicButton);
+    recognizer.addEventListener('error', resetMicButton);
+  } else {
+    helpChatMicBtn.title = 'Voice input is not supported in this browser';
+    helpChatMicBtn.style.opacity = '.4';
+    helpChatMicBtn.style.cursor = 'not-allowed';
+  }
 }
 
 async function submitHelpQuestion(){
