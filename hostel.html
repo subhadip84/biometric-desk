@@ -163,7 +163,7 @@
         <div class="search-box">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1D2430" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
           <input type="text" id="searchInput" placeholder="App No/Reg No/Machine Code/Name" autocomplete="off">
-          <button type="button" id="voiceCommandBtn" title="Voice command — e.g. &quot;mark APP-2026-1234 as verified&quot;" style="flex-shrink:0; width:30px; height:30px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/></svg></button>
+          <button type="button" id="voiceCommandBtn" title="Voice command — e.g. &quot;mark APP-2026-1234 as verified&quot;" style="flex-shrink:0; width:26px; height:26px; background:transparent; border:none; color:var(--color-text-muted); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/></svg></button>
         </div>
         <div style="font-size:11.5px; color:var(--color-text-muted); margin-top:6px;">Type any part of Application/Roll No, Registration Number, Machine Code, or name — then press Enter or Search.</div>
         <div id="suggestions"></div>
@@ -1867,7 +1867,6 @@ if(voiceCommandBtn){
     voiceCommandBtn.addEventListener('click', () => {
       if(cmdListening) return;
       cmdListening = true;
-      voiceCommandBtn.style.background = 'var(--color-pending-soft)';
       voiceCommandBtn.style.color = 'var(--color-pending)';
       voiceCommandBtn.style.animation = 'micPulse 1s ease-in-out infinite';
       try{ cmdRecognizer.start(); }catch(e){ /* already started */ }
@@ -1875,8 +1874,7 @@ if(voiceCommandBtn){
 
     function resetVoiceCommandBtn(){
       cmdListening = false;
-      voiceCommandBtn.style.background = 'var(--color-bg)';
-      voiceCommandBtn.style.color = 'var(--color-navy)';
+      voiceCommandBtn.style.color = 'var(--color-text-muted)';
       voiceCommandBtn.style.animation = 'none';
     }
     cmdRecognizer.addEventListener('end', resetVoiceCommandBtn);
