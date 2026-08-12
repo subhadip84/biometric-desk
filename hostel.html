@@ -12,7 +12,7 @@
 <style>
   :root{
     --color-bg:#F5F6F9; --color-surface:#FFFFFF;
-    --color-navy:#1B2A4A; --color-navy-deep:#12203A;
+    --color-navy:#1B2A4A; --color-navy-deep:#12203A; --color-heading:#12203A;
     --color-gold:#C9A227; --color-gold-soft:#F1E4B8;
     --color-success:#1F8A56; --color-success-soft:#E4F3EC;
     --color-pending:#C4432B; --color-pending-soft:#FBEAE6;
@@ -21,7 +21,7 @@
   }
   html[data-theme="dark"]{
     --color-bg:#0d1117; --color-surface:#161b22;
-    --color-navy:#2d4166; --color-navy-deep:#0a1120;
+    --color-navy:#2d4166; --color-navy-deep:#0a1120; --color-heading:#e6edf3;
     --color-gold:#d4af37; --color-gold-soft:#3a3320;
     --color-success:#3fb877; --color-success-soft:#122a1d;
     --color-pending:#e0654a; --color-pending-soft:#2e1712;
@@ -63,14 +63,14 @@
   @media (max-width:860px){ .layout{ grid-template-columns:1fr; } }
   .panel{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:10px; padding:18px; }
   .panel + .panel{ margin-top:16px; }
-  .panel h2{ font-family:var(--font-display); font-size:15px; margin:0 0 12px; color:var(--color-navy-deep); }
+  .panel h2{ font-family:var(--font-display); font-size:15px; margin:0 0 12px; color:var(--color-heading); }
   .search-box{ position:relative; display:flex; align-items:center; gap:6px; }
   .search-box > svg:first-child{ position:absolute; left:10px; top:50%; transform:translateY(-50%); opacity:.45; pointer-events:none; }
   .search-box input{ flex:1; min-width:0; padding:11px 10px 11px 32px; border-radius:8px; border:1px solid var(--color-border); font-size:12px; font-family:var(--font-mono); box-sizing:border-box; }
   .search-box input::placeholder{ color:var(--color-text-muted); opacity:.85; font-size:10px; }
   .stat-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:14px; }
   .stat{ border:1px solid var(--color-border); border-radius:8px; padding:9px; text-align:center; }
-  .stat .n{ font-family:var(--font-display); font-size:19px; font-weight:700; color:var(--color-navy-deep); }
+  .stat .n{ font-family:var(--font-display); font-size:19px; font-weight:700; color:var(--color-heading); }
   .stat .l{ font-size:9.5px; color:var(--color-text-muted); text-transform:uppercase; }
   .stat.done .n{ color:var(--color-success); }
   .stat.pending .n{ color:var(--color-pending); }
@@ -132,7 +132,7 @@
   <div style="width:52px; height:52px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(0,0,0,.1);">
     <div style="width:26px; height:26px; border:3px solid var(--color-border); border-top-color:var(--color-gold); border-radius:50%; animation:hostelSpin .8s linear infinite;"></div>
   </div>
-  <div style="font-family:var(--font-display); font-size:14px; color:var(--color-navy-deep); font-weight:600;">Loading your roster…</div>
+  <div style="font-family:var(--font-display); font-size:14px; color:var(--color-heading); font-weight:600;">Loading your roster…</div>
 </div>
 
 <div id="toastContainer"></div>
@@ -186,7 +186,7 @@
             <circle cx="45" cy="45" r="38" fill="none" stroke="var(--color-bg)" stroke-width="8"/>
             <circle id="progressRingCircle" cx="45" cy="45" r="38" fill="none" stroke="var(--color-success)" stroke-width="8" stroke-linecap="round" stroke-dasharray="238.76" stroke-dashoffset="238.76" transform="rotate(-90 45 45)" style="transition:stroke-dashoffset .5s ease;"/>
           </svg>
-          <div style="position:absolute; top:0; left:0; width:86px; height:86px; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:17px; font-weight:700; color:var(--color-navy-deep);" id="progressRingText">0%</div>
+          <div style="position:absolute; top:0; left:0; width:86px; height:86px; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:17px; font-weight:700; color:var(--color-heading);" id="progressRingText">0%</div>
         </div>
         <div class="stat-grid">
           <div class="stat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-navy)" stroke-width="2" style="margin-bottom:4px;"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v2M16 4v2"/></svg><div class="n" id="statTotal">0</div><div class="l">Total</div></div>
@@ -214,7 +214,7 @@
     <div>
       <div id="detailArea">
         <div class="empty-state">
-          <div style="font-family:var(--font-display); font-size:16px; color:var(--color-navy-deep); margin-bottom:6px;">No student selected</div>
+          <div style="font-family:var(--font-display); font-size:16px; color:var(--color-heading); margin-bottom:6px;">No student selected</div>
           <div>Search for a hosteller to view and verify face capture status.</div>
         </div>
       </div>
@@ -1276,7 +1276,7 @@ function renderDetail(s){
         showUnlockModal(async (password) => {
           const data = await runScript('deleteHostelStudent', s.id, password, sessionStorage.getItem(USERNAME_KEY) || 'Admin', sessionStorage.getItem(USERID_KEY));
           if(!data.ok) throw new Error(data.error || 'Delete failed.');
-          detailArea.innerHTML = `<div class="empty-state"><div style="font-family:var(--font-display); font-size:16px; color:var(--color-navy-deep); margin-bottom:6px;">Student deleted</div><div>Search for another hosteller to view details.</div></div>`;
+          detailArea.innerHTML = `<div class="empty-state"><div style="font-family:var(--font-display); font-size:16px; color:var(--color-heading); margin-bottom:6px;">Student deleted</div><div>Search for another hosteller to view details.</div></div>`;
           await loadHostelData();
           showToast('Student deleted.', 'success');
         }, 'Delete Student', 'Delete');
