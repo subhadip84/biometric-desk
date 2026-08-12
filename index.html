@@ -249,6 +249,7 @@
     animation: modalScaleIn .2s cubic-bezier(.2,.9,.3,1.1);
   }
   @keyframes modalScaleIn{ from{ opacity:0; transform:scale(.95) translateY(6px); } to{ opacity:1; transform:scale(1) translateY(0); } }
+  @keyframes micPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.4; } }
   .modal-box h3{ font-family:var(--font-display); font-size:16px; margin:0 0 14px; color:var(--color-navy-deep); }
   .modal-box input[type=password], .modal-box input[type=text], .modal-box input[type=email], .modal-box input[type=tel]{
     width:100%; padding:11px 14px; border-radius:8px; border:1px solid var(--color-border);
@@ -313,6 +314,10 @@
 </style>
 </head>
 <body>
+
+<div id="initialLoadOverlay" style="position:fixed; inset:0; z-index:3000; background:var(--color-bg); display:flex; align-items:center; justify-content:center;">
+  <div style="width:26px; height:26px; border:3px solid var(--color-border); border-top-color:var(--color-gold); border-radius:50%; animation:splashSpin .8s linear infinite;"></div>
+</div>
 
 <div id="loginScreen">
   <div class="login-card">
@@ -575,7 +580,7 @@
   <div id="helpChatChips" style="padding:8px 12px; display:flex; flex-wrap:wrap; gap:6px; border-top:1px solid var(--color-border); max-height:110px; overflow-y:auto;"></div>
   <div style="padding:10px 12px; border-top:1px solid var(--color-border); display:flex; gap:6px; align-items:center;">
     <input type="text" id="helpChatInput" placeholder="Ask me anything…" style="flex:1; border:1px solid var(--color-border); border-radius:20px; padding:7px 12px; font-size:12.5px; font-family:var(--font-body); min-width:0;">
-    <button id="helpChatMicBtn" title="Voice input" style="width:32px; height:32px; border-radius:50%; background:var(--color-bg); color:var(--color-navy); border:1px solid var(--color-border); cursor:pointer; flex-shrink:0; font-size:14px;">🎤</button>
+    <button id="helpChatMicBtn" title="Voice input" style="width:32px; height:32px; border-radius:50%; background:var(--color-bg); color:var(--color-navy); border:1px solid var(--color-border); cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center;"><svg id="helpChatMicIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/></svg></button>
     <button id="helpChatSendBtn" style="width:32px; height:32px; border-radius:50%; background:var(--color-navy); color:#fff; border:none; cursor:pointer; flex-shrink:0; font-size:14px;">➤</button>
   </div>
 </div>
@@ -4439,7 +4444,7 @@ if(helpChatMicBtn){
       listening = true;
       helpChatMicBtn.style.background = 'var(--color-pending-soft)';
       helpChatMicBtn.style.color = 'var(--color-pending)';
-      helpChatMicBtn.textContent = '●';
+      helpChatMicBtn.style.animation = 'micPulse 1s ease-in-out infinite';
       try{ recognizer.start(); }catch(e){ /* already started */ }
     });
     recognizer.addEventListener('result', (e) => {
@@ -4450,7 +4455,7 @@ if(helpChatMicBtn){
       listening = false;
       helpChatMicBtn.style.background = 'var(--color-bg)';
       helpChatMicBtn.style.color = 'var(--color-navy)';
-      helpChatMicBtn.textContent = '🎤';
+      helpChatMicBtn.style.animation = 'none';
     }
     recognizer.addEventListener('end', resetMicButton);
     recognizer.addEventListener('error', resetMicButton);
@@ -4519,12 +4524,16 @@ if(loggedOutReason){
 
 // Auto-login check — must run last, after every function/variable above is defined,
 // since a returning session immediately calls enterApp(), which uses them all.
+const initialLoadOverlay = document.getElementById('initialLoadOverlay');
 if(sessionStorage.getItem(SESSION_KEY) === 'yes'){
   if(sessionStorage.getItem(HOSTELLER_ONLY_KEY) === 'yes'){
-    window.location.href = 'hostel.html';
+    window.location.href = 'hostel.html'; // leave overlay visible - navigating away anyway
   } else {
     enterApp();
+    if(initialLoadOverlay) initialLoadOverlay.remove();
   }
+} else {
+  if(initialLoadOverlay) initialLoadOverlay.remove();
 }
 
 
