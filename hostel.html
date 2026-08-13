@@ -1187,7 +1187,7 @@ function showActivityLogModal(){
         <input type="date" id="alToDate" style="padding:6px 9px; border-radius:6px; border:1px solid var(--color-border); font-size:12px; font-family:var(--font-body);">
         <button class="btn btn-ghost" id="alExportPdfBtn" style="padding:6px 12px; font-size:12px;">Export PDF</button>
       </div>
-      <div id="alContent" style="font-size:12.5px; color:var(--color-text-muted);">Loading…</div>
+      <div id="alContent" style="font-size:12.5px; color:var(--color-text-muted);"><div class="skeleton-line" style="width:70%;"></div><div class="skeleton-line" style="width:45%;"></div></div>
       <button class="btn btn-ghost" id="alCloseBtn" style="width:100%; margin-top:14px;">Close</button>
     </div>
   `;
@@ -1394,7 +1394,7 @@ function showQrCodeModal(s){
     showToast('This student has no App No, Reg No, or Machine Code to encode.', 'error');
     return;
   }
-  const deepLink = `${window.location.origin}${window.location.pathname}?lookup=${encodeURIComponent(identifier)}`;
+  const deepLink = `${window.location.origin}${window.location.pathname.replace(/hostel\.html$/, '')}lookup.html?id=${encodeURIComponent(identifier)}&type=hostel`;
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
