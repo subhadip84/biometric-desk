@@ -1689,7 +1689,7 @@ function showQrCodeModal(r){
     showToast('This student has no App No, Reg No, or Machine Code to encode.', 'error');
     return;
   }
-  const deepLink = `${window.location.origin}${window.location.pathname}?lookup=${encodeURIComponent(identifier)}`;
+  const deepLink = `${window.location.origin}${window.location.pathname.replace(/index\.html$/, '')}lookup.html?id=${encodeURIComponent(identifier)}&type=main`;
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
