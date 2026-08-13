@@ -12,6 +12,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
 <style>
   :root{
     --color-bg:#F5F6F9; --color-surface:#FFFFFF;
@@ -414,6 +415,7 @@
         <button class="menu-item" id="demoInfoBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Demo Account Info</button>
         <button class="menu-item" id="resetUserPasswordBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>Reset User Password</button>
         <button class="menu-item" id="manageUsersBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M15.5 14c2.6.3 4.5 2.4 4.5 5"/></svg>Manage Users</button>
+        <button class="menu-item" id="appSettingsBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.6 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1z"/></svg>App Settings</button>
         <button class="menu-item" id="composeMessageBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v13H7l-3 3z"/></svg>Compose Message</button>
         <button class="menu-item" id="hostelLookupBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg>Hostel Lookup</button>
         <button class="menu-item" id="activityLogBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Activity Log</button>
@@ -592,6 +594,20 @@
     <div style="font-size:11.5px; color:var(--color-text-muted); margin-bottom:12px;">Staff currently active, based on recent activity</div>
     <div id="onlineUsersContent"></div>
   </div>
+
+  <div class="panel" id="spotCheckPanel" style="display:none; margin-top:24px; align-items:center; justify-content:space-between; gap:12px;">
+    <div>
+      <div style="font-size:13px; font-weight:600; color:var(--color-text);">🎲 Spot-check a record</div>
+      <div style="font-size:11px; color:var(--color-text-muted); margin-top:2px;">Pulls up one random verified student for a quick second look</div>
+    </div>
+    <button class="btn btn-primary" id="spotCheckBtn" style="flex-shrink:0;">Try one</button>
+  </div>
+
+  <div class="panel" id="leaderboardPanel" style="display:none; margin-top:24px;">
+    <h2 style="margin:0 0 4px;">This Week's Leaderboard</h2>
+    <div style="font-size:11.5px; color:var(--color-text-muted); margin-bottom:12px;">Verifications completed in the last 7 days</div>
+    <div id="leaderboardContent"></div>
+  </div>
 </main>
 
 <div id="helpChatToggle" style="position:fixed; bottom:24px; right:24px; width:52px; height:52px; border-radius:50%; background:var(--color-gold); color:var(--color-navy-deep); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; box-shadow:0 6px 18px rgba(0,0,0,.25); cursor:pointer; z-index:900;">?</div>
@@ -728,6 +744,47 @@ function showToast(message, type){
   }, 3200);
 }
 
+function showUndoToast(student, isHostel){
+  const container = document.getElementById('toastContainer');
+  if(!container) return;
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-success';
+  toast.style.cssText += 'display:flex; align-items:center; gap:14px;';
+  const name = isHostel ? student.studentName : student.name;
+  let secondsLeft = 15;
+  toast.innerHTML = `<span>✓ ${escapeHtml(name)} marked Verified</span><span id="undoLink" style="color:var(--color-gold); font-weight:700; white-space:nowrap; cursor:pointer;">Undo (${secondsLeft}s)</span>`;
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+
+  const undoLink = toast.querySelector('#undoLink');
+  const countdownTimer = setInterval(() => {
+    secondsLeft--;
+    if(secondsLeft <= 0){ clearInterval(countdownTimer); dismiss(); return; }
+    undoLink.textContent = `Undo (${secondsLeft}s)`;
+  }, 1000);
+
+  function dismiss(){
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }
+
+  undoLink.addEventListener('click', async () => {
+    clearInterval(countdownTimer);
+    const actorName = sessionStorage.getItem(USERNAME_KEY) || 'unknown';
+    try{
+      const fnName = isHostel ? 'undoRecentHostelVerification' : 'undoRecentVerification';
+      const data = await runScript(fnName, student.id, actorName);
+      if(!data.ok) throw new Error(data.error || 'Could not undo.');
+      dismiss();
+      showToast('Verification undone.', 'success');
+      if(isHostel){ await loadHostelData(); } else { await fetchStudents(); }
+    }catch(err){
+      dismiss();
+      showToast(err.message, 'error');
+    }
+  });
+}
+
 // IMPORTANT: replace this with your actual deployed Apps Script Web App URL
 // (Deploy > Manage deployments > copy the "Web app" URL, ending in /exec)
 const API_BASE_URL = 'https://biometric-backend-ijiv.onrender.com';
@@ -806,9 +863,11 @@ async function fetchStudents(){
     renderForecast();
     renderUnusualActivity();
     renderOnlineUsers();
+    renderLeaderboard();
     renderPrioritySites();
     updateTodayVerifiedCount();
     updateTodayImportCount();
+    handleLookupDeepLink();
     const loadingSplash = document.getElementById('loadingSplash');
     if(loadingSplash) loadingSplash.remove();
     if(sessionStorage.getItem(ADMIN_KEY) === 'yes'){
@@ -1242,6 +1301,34 @@ function animateNumber(el, toValue, suffix){
   requestAnimationFrame(tick);
 }
 
+let hasHandledLookupDeepLink = false;
+function handleLookupDeepLink(){
+  if(hasHandledLookupDeepLink) return;
+  const urlParams = new URLSearchParams(window.location.search);
+  const lookupId = urlParams.get('lookup');
+  if(!lookupId) return;
+  hasHandledLookupDeepLink = true;
+  window.history.replaceState({}, '', window.location.pathname);
+  const matches = findMatches(lookupId);
+  if(matches.length === 1) selectStudent(matches[0].id);
+  else if(matches.length > 1){ searchInput.value = lookupId; searchInput.dispatchEvent(new Event('input')); }
+  else showToast(`No student found matching "${lookupId}" from the QR code.`, 'error');
+}
+
+const spotCheckBtn = document.getElementById('spotCheckBtn');
+if(spotCheckBtn){
+  spotCheckBtn.addEventListener('click', () => {
+    const verified = roster.filter(r => r.status === 'done');
+    if(!verified.length){
+      showToast('No verified students yet to spot-check.', 'error');
+      return;
+    }
+    const pick = verified[Math.floor(Math.random() * verified.length)];
+    selectStudent(pick.id);
+    showToast(`Spot-checking ${pick.name}`, 'success');
+  });
+}
+
 function renderStats(){
   const done = roster.filter(r => r.status === 'done').length;
   animateNumber(document.getElementById('statTotal'), roster.length);
@@ -1553,6 +1640,81 @@ function printStudentDetail(r){
   window.print();
 }
 
+async function showAppSettingsModal(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:360px;">
+      <h3>App Settings</h3>
+      <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; margin-bottom:6px;">
+        <input type="checkbox" id="undoToggle" style="margin-top:3px; width:16px; height:16px; flex-shrink:0;">
+        <span style="font-size:12.5px; color:var(--color-text); line-height:1.5;">
+          <strong>Allow "Undo" after verifying</strong><br>
+          <span style="color:var(--color-text-muted); font-size:11.5px;">Gives everyone (staff included) a 15-second window to undo a verification right after marking it, without needing an admin unlock.</span>
+        </span>
+      </label>
+      <div class="modal-error" id="settingsErr" style="margin-top:8px;"></div>
+      <button class="btn btn-ghost" id="settingsCloseBtn" style="width:100%; margin-top:10px;">Close</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  const checkbox = overlay.querySelector('#undoToggle');
+  const errEl = overlay.querySelector('#settingsErr');
+
+  try{
+    const data = await runScript('getUndoSetting');
+    checkbox.checked = data.ok && data.enabled;
+  }catch(err){ /* default unchecked if this fails */ }
+
+  checkbox.addEventListener('change', async () => {
+    errEl.textContent = '';
+    const userId = sessionStorage.getItem(USERID_KEY);
+    try{
+      const data = await runScript('setUndoSetting', checkbox.checked, userId);
+      if(!data.ok) throw new Error(data.error || 'Could not update setting.');
+      showToast(checkbox.checked ? 'Undo window enabled for everyone.' : 'Undo window disabled.', 'success');
+    }catch(err){
+      checkbox.checked = !checkbox.checked; // revert on failure
+      errEl.textContent = err.message;
+    }
+  });
+
+  overlay.querySelector('#settingsCloseBtn').addEventListener('click', () => overlay.remove());
+}
+document.getElementById('appSettingsBtn')?.addEventListener('click', showAppSettingsModal);
+
+function showQrCodeModal(r){
+  const identifier = r.appNo || r.regNo || r.machineCode;
+  if(!identifier){
+    showToast('This student has no App No, Reg No, or Machine Code to encode.', 'error');
+    return;
+  }
+  const deepLink = `${window.location.origin}${window.location.pathname}?lookup=${encodeURIComponent(identifier)}`;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="text-align:center; max-width:300px;">
+      <h3>Quick Lookup QR Code</h3>
+      <div style="font-size:12.5px; color:var(--color-text); margin-bottom:4px; font-weight:600;">${escapeHtml(r.name)||'(no name)'}</div>
+      <div style="font-size:11px; color:var(--color-text-muted); font-family:var(--font-mono); margin-bottom:14px;">${escapeHtml(identifier)}</div>
+      <div id="qrCodeCanvas" style="display:flex; justify-content:center; margin-bottom:14px;"></div>
+      <div style="font-size:11px; color:var(--color-text-muted); margin-bottom:14px;">Scan with a phone camera to open this student directly — printable on a desk card.</div>
+      <button class="btn btn-ghost" id="qrCloseBtn" style="width:100%;">Close</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const qrContainer = overlay.querySelector('#qrCodeCanvas');
+  if(typeof QRCode !== 'undefined'){
+    new QRCode(qrContainer, { text: deepLink, width: 160, height: 160, colorDark: '#12203A', colorLight: '#ffffff' });
+  } else {
+    qrContainer.innerHTML = '<div class="search-hint">QR library is still loading — try again in a moment.</div>';
+  }
+
+  overlay.querySelector('#qrCloseBtn').addEventListener('click', () => overlay.remove());
+}
+
 function renderDetail(r){
   const isDone = r.status === 'done';
   const locked = !!r.locked;
@@ -1569,7 +1731,8 @@ function renderDetail(r){
           <div class="name">${escapeHtml(r.name || '(no name on file)')}</div>
           <div class="status-line">${isDone ? 'Biometric verification complete' : 'Awaiting biometric verification'}${locked ? ' · Locked' : ''}</div>
         </div>
-        <button type="button" id="printDetailBtn" title="Print this record" style="margin-left:auto; flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
+        <button type="button" id="qrDetailBtn" title="Show QR code for quick lookup" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center; margin-left:auto;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="17.5" x2="21" y2="17.5"/></svg></button>
+        <button type="button" id="printDetailBtn" title="Print this record" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
       </div>
       <div class="vc-body">
         <div class="detail-grid">
@@ -1611,6 +1774,10 @@ function renderDetail(r){
   const printDetailBtn = document.getElementById('printDetailBtn');
   if(printDetailBtn){
     printDetailBtn.addEventListener('click', () => printStudentDetail(r));
+  }
+  const qrDetailBtn = document.getElementById('qrDetailBtn');
+  if(qrDetailBtn){
+    qrDetailBtn.addEventListener('click', () => showQrCodeModal(r));
   }
 
   if(canDelete){
@@ -1679,6 +1846,7 @@ function renderDetail(r){
         if(newStatus === 'done'){
           const freshSeal = detailArea.querySelector('.seal');
           if(freshSeal) freshSeal.classList.add('seal-pop');
+          if(undoWindowEnabled) showUndoToast(r, false);
         }
         const note2 = document.getElementById('savedNote');
         note2.textContent = 'Saved to Sheet — record is now locked.';
@@ -2110,6 +2278,29 @@ async function renderOnlineUsers(){
   }
 }
 
+async function renderLeaderboard(){
+  const contentEl = document.getElementById('leaderboardContent');
+  if(!contentEl) return;
+  contentEl.innerHTML = `<div class="skeleton-line" style="width:70%;"></div><div class="skeleton-line" style="width:45%;"></div>`;
+  try{
+    const data = await runScript('getStaffLeaderboard');
+    if(!data.ok || !data.leaderboard.length){
+      contentEl.innerHTML = `<div style="font-size:12.5px; color:var(--color-text-muted);">No verifications in the last 7 days yet.</div>`;
+      return;
+    }
+    const medals = ['🥇', '🥈', '🥉'];
+    contentEl.innerHTML = data.leaderboard.map((entry, i) => `
+      <div style="display:flex; align-items:center; gap:10px; padding:6px 0; border-top:${i===0?'none':'1px solid var(--color-border)'};">
+        <span style="font-size:15px; width:20px; text-align:center;">${medals[i] || (i+1)}</span>
+        <span style="font-size:12.5px; color:var(--color-text); flex:1;">${escapeHtml(entry.actor)}</span>
+        <span style="font-size:12px; font-weight:700; color:var(--color-success);">${entry.count}</span>
+      </div>
+    `).join('');
+  }catch(err){
+    contentEl.innerHTML = `<div style="font-size:12px; color:var(--color-text-muted);">Could not load the leaderboard right now.</div>`;
+  }
+}
+
 const siteSummarySortSelect = document.getElementById('siteSummarySort');
 if(siteSummarySortSelect){
   siteSummarySortSelect.addEventListener('change', renderSiteSummary);
@@ -2185,10 +2376,16 @@ function enterApp(){
   if(unusualActivityPanel) unusualActivityPanel.style.display = perms.viewSummary ? 'block' : 'none';
   const onlineUsersPanel = document.getElementById('onlineUsersPanel');
   if(onlineUsersPanel) onlineUsersPanel.style.display = perms.viewSummary ? 'block' : 'none';
+  const spotCheckPanel = document.getElementById('spotCheckPanel');
+  if(spotCheckPanel) spotCheckPanel.style.display = perms.viewSummary ? 'flex' : 'none';
+  const leaderboardPanel = document.getElementById('leaderboardPanel');
+  if(leaderboardPanel) leaderboardPanel.style.display = perms.viewSummary ? 'block' : 'none';
   const resetUserPasswordBtn = document.getElementById('resetUserPasswordBtn');
   if(resetUserPasswordBtn) resetUserPasswordBtn.style.display = perms.resetPasswords ? 'block' : 'none';
   const manageUsersBtn = document.getElementById('manageUsersBtn');
   if(manageUsersBtn) manageUsersBtn.style.display = perms.manageUsers ? 'block' : 'none';
+  const appSettingsBtn = document.getElementById('appSettingsBtn');
+  if(appSettingsBtn) appSettingsBtn.style.display = isAdmin ? 'block' : 'none';
   const composeMessageBtn = document.getElementById('composeMessageBtn');
   if(composeMessageBtn) composeMessageBtn.style.display = perms.composeMessage ? 'block' : 'none';
   const hostelLookupBtn = document.getElementById('hostelLookupBtn');
@@ -2221,6 +2418,32 @@ function enterApp(){
   resetInactivityTimer();
   startAutoRefresh();
   startHeartbeat();
+  if(isAdmin) showLoginDigestIfAvailable();
+  runScript('getUndoSetting').then(data => { undoWindowEnabled = data.ok && data.enabled; }).catch(() => { undoWindowEnabled = false; });
+}
+let undoWindowEnabled = false;
+
+async function showLoginDigestIfAvailable(){
+  try{
+    const actorName = sessionStorage.getItem(USERNAME_KEY) || sessionStorage.getItem(USERID_KEY);
+    if(!actorName) return;
+    const data = await runScript('getLoginDigest', actorName);
+    if(!data.ok || !data.hasPrevious) return;
+    if(data.verifiedCount === 0 && data.newStaffCount === 0 && data.unusualFlagCount === 0) return;
+
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:1100; max-width:420px; width:calc(100% - 32px); background:var(--color-navy-deep); color:#fff; border-radius:12px; padding:14px 18px; box-shadow:0 14px 36px rgba(0,0,0,.3); font-size:12.5px; line-height:1.7;';
+    banner.innerHTML = `
+      <div style="font-weight:600; margin-bottom:4px;">Welcome back — since your last login:</div>
+      ${data.verifiedCount > 0 ? `<div>✓ ${data.verifiedCount} student(s) verified</div>` : ''}
+      ${data.newStaffCount > 0 ? `<div>✓ ${data.newStaffCount} new staff account(s) created</div>` : ''}
+      ${data.unusualFlagCount > 0 ? `<div>⚠ ${data.unusualFlagCount} unusual activity flag(s) — check "Worth a Glance"</div>` : ''}
+      <div style="text-align:right; margin-top:8px; cursor:pointer; opacity:.8; font-size:11px;" id="digestDismissBtn">Dismiss</div>
+    `;
+    document.body.appendChild(banner);
+    banner.querySelector('#digestDismissBtn').addEventListener('click', () => banner.remove());
+    setTimeout(() => banner.remove(), 12000);
+  }catch(err){ /* login digest is a nice-to-have, fail silently */ }
 }
 
 const USERID_KEY = 'bioDeskUserId';
@@ -4677,7 +4900,11 @@ if(voiceCommandBtn){
         const data = await runScript('updateStatus', student.id, targetStatus, currentUserId);
         if(!data.ok) throw new Error(data.error || 'Update failed.');
         await fetchStudents();
-        showToast(`${student.name} marked ${targetLabel}.`, 'success');
+        if(targetStatus === 'done' && undoWindowEnabled){
+          showUndoToast(student, false);
+        } else {
+          showToast(`${student.name} marked ${targetLabel}.`, 'success');
+        }
       }catch(err){
         showToast(err.message || 'Voice command failed.', 'error');
       }
