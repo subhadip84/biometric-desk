@@ -41,6 +41,12 @@
     display:none; justify-content:space-between; align-items:flex-end;
     border-bottom:2px solid #000; padding-bottom:8px; margin-bottom:12px; font-size:11px; color:#000;
   }
+  .skeleton-line{
+    height:12px; border-radius:6px; margin:6px 0;
+    background:linear-gradient(90deg, var(--color-bg) 25%, #e4e7ee 37%, var(--color-bg) 63%);
+    background-size:400% 100%; animation:skeletonShimmer 1.4s ease infinite;
+  }
+  @keyframes skeletonShimmer{ 0%{ background-position:100% 50%; } 100%{ background-position:0 50%; } }
   *{box-sizing:border-box;}
   body{ margin:0; background:var(--color-bg); color:var(--color-text); font-family:var(--font-body); -webkit-font-smoothing:antialiased; }
   header.topbar{
@@ -88,6 +94,12 @@
   .vc-head{ background:var(--color-navy); color:#fff; padding:clamp(14px, 2.8vw, 16px) clamp(15px, 3vw, 20px); display:flex; align-items:center; gap:clamp(12px, 2.4vw, 16px); }
   .seal{ width:clamp(46px, 7.5vw, 54px); height:clamp(46px, 7.5vw, 54px); border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; border:2.5px dashed rgba(255,255,255,.55); font-family:var(--font-display); font-weight:700; font-size:clamp(15px, 2.8vw, 18px); }
   .seal.is-done{ border:2.5px solid var(--color-gold); background:rgba(201,162,39,.18); }
+  .seal-pop{ animation:sealPop .5s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes sealPop{
+    0%{ transform:scale(0.6); box-shadow:0 0 0 0 rgba(201,162,39,.5); }
+    60%{ transform:scale(1.15); box-shadow:0 0 0 10px rgba(201,162,39,0); }
+    100%{ transform:scale(1); box-shadow:0 0 0 0 rgba(201,162,39,0); }
+  }
   .vc-head-text{ flex:1; min-width:0; }
   .vc-head-text .name{ font-family:var(--font-display); font-size:clamp(15px, 3vw, 18px); font-weight:600; overflow-wrap:break-word; }
   .vc-head-text .status-line{ font-size:clamp(10.5px, 1.9vw, 12px); color:#C7D0E3; margin-top:2px; }
@@ -847,7 +859,7 @@ function renderHostelForecast(){
 async function renderHostelUnusualActivity(){
   const contentEl = document.getElementById('hostelUnusualActivityContent');
   if(!contentEl) return;
-  contentEl.innerHTML = `<div style="font-size:12px; color:var(--color-text-muted);">Checking…</div>`;
+  contentEl.innerHTML = `<div class="skeleton-line" style="width:70%;"></div><div class="skeleton-line" style="width:45%;"></div>`;
   try{
     const data = await runScript('getUnusualActivityFlags');
     if(!data.ok || !data.flags.length){
@@ -875,7 +887,7 @@ async function renderHostelUnusualActivity(){
 async function renderHostelOnlineUsers(){
   const contentEl = document.getElementById('hostelOnlineUsersContent');
   if(!contentEl) return;
-  contentEl.innerHTML = `<div style="font-size:12px; color:var(--color-text-muted);">Checking…</div>`;
+  contentEl.innerHTML = `<div class="skeleton-line" style="width:70%;"></div><div class="skeleton-line" style="width:45%;"></div>`;
   try{
     const data = await runScript('getOnlineUsers');
     if(!data.ok || !data.users.length){
@@ -976,7 +988,7 @@ function findMatches(q){
   );
 }
 function renderSuggestions(matches){
-  if(!matches.length){ suggestions.innerHTML = '<div style="font-size:12px; color:var(--color-text-muted); margin-top:8px;">No matches.</div>'; return; }
+  if(!matches.length){ suggestions.innerHTML = '<div style="font-size:12px; color:var(--color-text-muted); margin-top:8px; display:flex; align-items:center; gap:8px;"><span style="font-size:15px; opacity:.5;">🔍</span> No matches.</div>'; return; }
   suggestions.innerHTML = matches.slice(0, 10).map(s => {
     const idLine = [s.applicationNo, s.registrationNo, s.machineCode].filter(Boolean).join(' · ');
     return `
@@ -1000,7 +1012,7 @@ searchInput.addEventListener('input', () => {
 function runHostelSearch(){
   const matches = findMatches(searchInput.value);
   if(!matches.length){
-    suggestions.innerHTML = '<div style="font-size:12px; color:var(--color-text-muted); margin-top:8px;">No matching students. Check the App No / Reg No / Machine Code and try again.</div>';
+    suggestions.innerHTML = '<div style="font-size:12px; color:var(--color-text-muted); margin-top:8px; display:flex; align-items:center; gap:8px;"><span style="font-size:15px; opacity:.5;">🔍</span> No matching students. Check the App No / Reg No / Machine Code and try again.</div>';
     return;
   }
   if(matches.length === 1) selectStudent(matches[0].id);
@@ -1338,6 +1350,10 @@ function renderDetail(s){
           await loadHostelData(); // refetch so verifiedBy/firstVerifiedBy/timestamps are current, not just status/locked
           const freshStudent = hostel.find(x => x.id === s.id);
           if(freshStudent) renderDetail(freshStudent);
+          if(e.target.value === 'done'){
+            const freshSeal = detailArea.querySelector('.seal');
+            if(freshSeal) freshSeal.classList.add('seal-pop');
+          }
           showToast('Saved.', 'success');
         }catch(err){
           showToast(err.message, 'error');
