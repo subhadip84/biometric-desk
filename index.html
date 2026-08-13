@@ -1511,8 +1511,13 @@ function printStudentDetail(r){
   const isDone = r.status === 'done';
   const printArea = document.getElementById('studentPrintArea');
   if(!printArea) return;
+  const logoImg = document.querySelector('.login-logo');
+  const logoSrc = logoImg ? logoImg.src : '';
   printArea.innerHTML = `
-    <div class="print-header">Adamas University · Biometric Verification Desk</div>
+    <div class="print-header">
+      ${logoSrc ? `<img src="${logoSrc}" alt="Adamas University" style="height:34px; width:auto;">` : ''}
+      <div>Adamas University · Biometric Verification Desk</div>
+    </div>
     <h2 style="font-family:var(--font-display); margin:0 0 4px;">${escapeHtml(r.name || '(no name on file)')}</h2>
     <div style="font-size:13px; color:#444; margin-bottom:18px;">${isDone ? 'Biometric verification: Complete' : 'Biometric verification: Pending'}</div>
     <table style="width:100%; border-collapse:collapse; font-size:13px;">
