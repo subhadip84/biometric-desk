@@ -415,7 +415,6 @@
         <button class="menu-item" id="demoInfoBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Demo Account Info</button>
         <button class="menu-item" id="resetUserPasswordBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>Reset User Password</button>
         <button class="menu-item" id="manageUsersBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M15.5 14c2.6.3 4.5 2.4 4.5 5"/></svg>Manage Users</button>
-        <button class="menu-item" id="appSettingsBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.6 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1z"/></svg>App Settings</button>
         <button class="menu-item" id="composeMessageBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v13H7l-3 3z"/></svg>Compose Message</button>
         <button class="menu-item" id="hostelLookupBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg>Hostel Lookup</button>
         <button class="menu-item" id="activityLogBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Activity Log</button>
@@ -771,9 +770,10 @@ function showUndoToast(student, isHostel){
   undoLink.addEventListener('click', async () => {
     clearInterval(countdownTimer);
     const actorName = sessionStorage.getItem(USERNAME_KEY) || 'unknown';
+    const actorUserId = sessionStorage.getItem(USERID_KEY);
     try{
       const fnName = isHostel ? 'undoRecentHostelVerification' : 'undoRecentVerification';
-      const data = await runScript(fnName, student.id, actorName);
+      const data = await runScript(fnName, student.id, actorName, actorUserId);
       if(!data.ok) throw new Error(data.error || 'Could not undo.');
       dismiss();
       showToast('Verification undone.', 'success');
@@ -1640,49 +1640,6 @@ function printStudentDetail(r){
   window.print();
 }
 
-async function showAppSettingsModal(){
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.innerHTML = `
-    <div class="modal-box" style="max-width:360px;">
-      <h3>App Settings</h3>
-      <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; margin-bottom:6px;">
-        <input type="checkbox" id="undoToggle" style="margin-top:3px; width:16px; height:16px; flex-shrink:0;">
-        <span style="font-size:12.5px; color:var(--color-text); line-height:1.5;">
-          <strong>Allow "Undo" after verifying</strong><br>
-          <span style="color:var(--color-text-muted); font-size:11.5px;">Gives everyone (staff included) a 15-second window to undo a verification right after marking it, without needing an admin unlock.</span>
-        </span>
-      </label>
-      <div class="modal-error" id="settingsErr" style="margin-top:8px;"></div>
-      <button class="btn btn-ghost" id="settingsCloseBtn" style="width:100%; margin-top:10px;">Close</button>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-  const checkbox = overlay.querySelector('#undoToggle');
-  const errEl = overlay.querySelector('#settingsErr');
-
-  try{
-    const data = await runScript('getUndoSetting');
-    checkbox.checked = data.ok && data.enabled;
-  }catch(err){ /* default unchecked if this fails */ }
-
-  checkbox.addEventListener('change', async () => {
-    errEl.textContent = '';
-    const userId = sessionStorage.getItem(USERID_KEY);
-    try{
-      const data = await runScript('setUndoSetting', checkbox.checked, userId);
-      if(!data.ok) throw new Error(data.error || 'Could not update setting.');
-      showToast(checkbox.checked ? 'Undo window enabled for everyone.' : 'Undo window disabled.', 'success');
-    }catch(err){
-      checkbox.checked = !checkbox.checked; // revert on failure
-      errEl.textContent = err.message;
-    }
-  });
-
-  overlay.querySelector('#settingsCloseBtn').addEventListener('click', () => overlay.remove());
-}
-document.getElementById('appSettingsBtn')?.addEventListener('click', showAppSettingsModal);
-
 function showQrCodeModal(r){
   const identifier = r.appNo || r.regNo || r.machineCode;
   if(!identifier){
@@ -2384,8 +2341,6 @@ function enterApp(){
   if(resetUserPasswordBtn) resetUserPasswordBtn.style.display = perms.resetPasswords ? 'block' : 'none';
   const manageUsersBtn = document.getElementById('manageUsersBtn');
   if(manageUsersBtn) manageUsersBtn.style.display = perms.manageUsers ? 'block' : 'none';
-  const appSettingsBtn = document.getElementById('appSettingsBtn');
-  if(appSettingsBtn) appSettingsBtn.style.display = isAdmin ? 'block' : 'none';
   const composeMessageBtn = document.getElementById('composeMessageBtn');
   if(composeMessageBtn) composeMessageBtn.style.display = perms.composeMessage ? 'block' : 'none';
   const hostelLookupBtn = document.getElementById('hostelLookupBtn');
@@ -2419,7 +2374,7 @@ function enterApp(){
   startAutoRefresh();
   startHeartbeat();
   if(isAdmin) showLoginDigestIfAvailable();
-  runScript('getUndoSetting').then(data => { undoWindowEnabled = data.ok && data.enabled; }).catch(() => { undoWindowEnabled = false; });
+  undoWindowEnabled = !!perms.allowUndo;
 }
 let undoWindowEnabled = false;
 
@@ -3148,6 +3103,7 @@ const PERMISSION_CHECKBOX_HTML = `
     <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; padding:4px 0;"><input type="checkbox" class="permCheckbox" value="manageUsers" checked> Manage Users</label>
     <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; padding:4px 0;"><input type="checkbox" class="permCheckbox" value="deleteStudent" checked> Delete Student</label>
     <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; padding:4px 0;"><input type="checkbox" class="permCheckbox" value="hostelAccess" checked> Hostel Data Access</label>
+    <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; padding:4px 0;"><input type="checkbox" class="permCheckbox" value="allowUndo" checked> Allow "Undo" after verifying (15s window)</label>
   </div>
 `;
 
@@ -3243,12 +3199,14 @@ function showAddUserModal(onSaved){
       deleteStudentBox.disabled = isDemo;
       if(isDemo) deleteStudentBox.checked = false;
     }
-    // Staff can only ever be granted hostelAccess - hide every other checkbox
-    // for that role so it can't become a backdoor to broader admin permissions.
+    // Staff can only ever be granted hostelAccess and allowUndo - hide every
+    // other checkbox for that role so it can't become a backdoor to broader
+    // admin permissions.
+    const staffAllowedPerms = ['hostelAccess', 'allowUndo'];
     permissionsSection.querySelectorAll('.permCheckbox').forEach(box => {
       const row = box.closest('label');
       if(!row) return;
-      row.style.display = (isStaff && box.value !== 'hostelAccess') ? 'none' : 'flex';
+      row.style.display = (isStaff && !staffAllowedPerms.includes(box.value)) ? 'none' : 'flex';
     });
   }
   togglePermissionsSection();
@@ -3483,12 +3441,14 @@ function showEditUserModal(user, onSaved){
       deleteStudentBox.disabled = isDemo;
       if(isDemo) deleteStudentBox.checked = false;
     }
-    // Staff can only ever be granted hostelAccess - hide every other checkbox
-    // for that role so it can't become a backdoor to broader admin permissions.
+    // Staff can only ever be granted hostelAccess and allowUndo - hide every
+    // other checkbox for that role so it can't become a backdoor to broader
+    // admin permissions.
+    const staffAllowedPerms = ['hostelAccess', 'allowUndo'];
     permissionsSection.querySelectorAll('.permCheckbox').forEach(box => {
       const row = box.closest('label');
       if(!row) return;
-      row.style.display = (isStaff && box.value !== 'hostelAccess') ? 'none' : 'flex';
+      row.style.display = (isStaff && !staffAllowedPerms.includes(box.value)) ? 'none' : 'flex';
     });
   }
   togglePermissionsSection();
