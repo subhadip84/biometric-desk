@@ -2263,6 +2263,89 @@ if(siteSummarySortSelect){
   siteSummarySortSelect.addEventListener('change', renderSiteSummary);
 }
 
+// --- Password strength: scoring, generation, and a reusable UI widget
+// (strength bar + auto-generate buttons) attachable to any password field. ---
+function getPasswordStrength(pw){
+  if(!pw) return { level: '', score: 0 };
+  let score = 0;
+  if(pw.length >= 6) score++;
+  if(pw.length >= 10) score++;
+  const varietyCount = [/[a-z]/.test(pw), /[A-Z]/.test(pw), /[0-9]/.test(pw), /[^a-zA-Z0-9]/.test(pw)].filter(Boolean).length;
+  if(varietyCount >= 2) score++;
+  if(varietyCount >= 3) score++;
+  if(score <= 1) return { level: 'weak', score };
+  if(score === 2) return { level: 'medium', score };
+  return { level: 'strong', score };
+}
+
+function generatePassword(level){
+  const lower = 'abcdefghijkmnpqrstuvwxyz'; // no l/o, easy to misread
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I/O
+  const digits = '23456789'; // no 0/1
+  const symbols = '!@#$%^&*';
+  function pick(charset, count){ let r=''; for(let i=0;i<count;i++) r += charset[Math.floor(Math.random()*charset.length)]; return r; }
+  function shuffle(str){ return str.split('').sort(() => Math.random()-0.5).join(''); }
+
+  if(level === 'weak') return pick(lower, 7);
+  if(level === 'medium') return shuffle(pick(lower, 5) + pick(digits, 3));
+  return shuffle(pick(lower, 4) + pick(upper, 3) + pick(digits, 3) + pick(symbols, 2));
+}
+
+// Inserts a strength bar + label + "Weak/Medium/Strong" generate buttons
+// right after the given password input, and wires everything up live.
+// confirmInputEl (optional) also gets filled when a password is generated.
+function attachPasswordStrengthUI(inputEl, confirmInputEl){
+  if(!inputEl || inputEl.dataset.strengthAttached) return;
+  inputEl.dataset.strengthAttached = 'true';
+
+  const widget = document.createElement('div');
+  widget.innerHTML = `
+    <div style="display:flex; gap:4px; margin-top:6px;">
+      <div class="pwd-seg" style="flex:1; height:4px; border-radius:2px; background:var(--color-border); transition:background .2s;"></div>
+      <div class="pwd-seg" style="flex:1; height:4px; border-radius:2px; background:var(--color-border); transition:background .2s;"></div>
+      <div class="pwd-seg" style="flex:1; height:4px; border-radius:2px; background:var(--color-border); transition:background .2s;"></div>
+    </div>
+    <div class="pwd-strength-label" style="font-size:10.5px; margin-top:3px; min-height:13px; color:var(--color-text-muted);"></div>
+    <div style="display:flex; gap:6px; margin-top:6px;">
+      <button type="button" class="pwd-gen-btn" data-level="weak" style="flex:1; padding:5px; font-size:10.5px; border-radius:6px; border:1px solid var(--color-border); background:#fff; cursor:pointer; color:var(--color-text-muted);">Auto: Weak</button>
+      <button type="button" class="pwd-gen-btn" data-level="medium" style="flex:1; padding:5px; font-size:10.5px; border-radius:6px; border:1px solid var(--color-border); background:#fff; cursor:pointer; color:var(--color-text-muted);">Auto: Medium</button>
+      <button type="button" class="pwd-gen-btn" data-level="strong" style="flex:1; padding:5px; font-size:10.5px; border-radius:6px; border:1px solid var(--color-border); background:#fff; cursor:pointer; color:var(--color-text-muted);">Auto: Strong</button>
+    </div>
+  `;
+  inputEl.insertAdjacentElement('afterend', widget);
+
+  const segs = widget.querySelectorAll('.pwd-seg');
+  const label = widget.querySelector('.pwd-strength-label');
+  const colors = { weak: 'var(--color-pending)', medium: '#C9A227', strong: 'var(--color-success)' };
+  const segCount = { weak: 1, medium: 2, strong: 3 };
+  const labelText = { weak: 'Weak', medium: 'Medium', strong: 'Strong' };
+
+  function updateMeter(){
+    const { level } = getPasswordStrength(inputEl.value);
+    segs.forEach((seg, i) => {
+      seg.style.background = level && i < segCount[level] ? colors[level] : 'var(--color-border)';
+    });
+    label.textContent = level ? labelText[level] : '';
+    label.style.color = level ? colors[level] : 'var(--color-text-muted)';
+  }
+  inputEl.addEventListener('input', updateMeter);
+  updateMeter();
+
+  widget.querySelectorAll('.pwd-gen-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const generated = generatePassword(btn.dataset.level);
+      inputEl.value = generated;
+      inputEl.dispatchEvent(new Event('input'));
+      if(confirmInputEl){
+        confirmInputEl.value = generated;
+        confirmInputEl.dispatchEvent(new Event('input'));
+      }
+      inputEl.type = 'text'; // briefly reveal so the generated password is visible
+      setTimeout(() => { inputEl.type = 'password'; }, 2500);
+    });
+  });
+}
+
 function escapeHtml(str){
   return String(str ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
@@ -2804,6 +2887,7 @@ function showForcedPasswordChangeModal(userId, currentPassword){
   const confirmInput = overlay.querySelector('#fpcConfirmPassword');
   const errorEl = overlay.querySelector('#fpcError');
   const confirmBtn = overlay.querySelector('#fpcConfirmBtn');
+  attachPasswordStrengthUI(newInput, confirmInput);
 
   newInput.focus();
 
@@ -2863,6 +2947,7 @@ function showChangePasswordModal(){
   const errorEl = overlay.querySelector('#cpError');
   const confirmBtn = overlay.querySelector('#cpConfirmBtn');
   const cancelBtn = overlay.querySelector('#cpCancelBtn');
+  attachPasswordStrengthUI(newInput, confirmInput);
 
   oldInput.focus();
 
@@ -2937,12 +3022,14 @@ function showResetUserPasswordModal(){
   const errorEl = overlay.querySelector('#rpError');
   const confirmBtn = overlay.querySelector('#rpConfirmBtn');
   const cancelBtn = overlay.querySelector('#rpCancelBtn');
+  attachPasswordStrengthUI(newInput);
 
   const capCurrentInput = overlay.querySelector('#capCurrentPassword');
   const capNewInput = overlay.querySelector('#capNewPassword');
   const capConfirmInput = overlay.querySelector('#capConfirmPassword');
   const capErrorEl = overlay.querySelector('#capError');
   const capConfirmBtn = overlay.querySelector('#capConfirmBtn');
+  attachPasswordStrengthUI(capNewInput, capConfirmInput);
 
   runScript('getUserList').then(data => {
     if(data.ok){
@@ -3145,10 +3232,6 @@ function showAddUserModal(onSaved){
       <div id="auUserIdPreview" style="display:none; font-size:12.5px; color:var(--color-text-muted); background:var(--color-bg); border-radius:6px; padding:8px 10px;">Will be generated from name + mobile number</div>
 
       <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; margin-top:14px; margin-bottom:6px;">Password</div>
-      <div style="display:flex; gap:14px; font-size:12.5px; margin-bottom:8px;">
-        <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="radio" name="auPasswordMode" value="manual" checked> Manual</label>
-        <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="radio" name="auPasswordMode" value="auto"> Auto-generate</label>
-      </div>
       <input type="password" id="auPassword" placeholder="Password (min. 4 characters)" autocomplete="off">
 
       <select id="auRole" style="width:100%; padding:11px 14px; border-radius:8px; border:1px solid var(--color-border); font-size:14px; font-family:var(--font-body); margin-top:14px;">
@@ -3285,14 +3368,7 @@ function showAddUserModal(onSaved){
   }
   mobileInput.addEventListener('input', scheduleContactCheck);
   emailInput.addEventListener('input', scheduleContactCheck);
-
-  overlay.querySelectorAll('input[name="auPasswordMode"]').forEach(r => {
-    r.addEventListener('change', () => {
-      const isAuto = overlay.querySelector('input[name="auPasswordMode"]:checked').value === 'auto';
-      passwordInput.style.display = isAuto ? 'none' : 'block';
-      passwordInput.value = '';
-    });
-  });
+  attachPasswordStrengthUI(passwordInput);
 
   async function submit(){
     errorEl.textContent = '';
@@ -3301,13 +3377,12 @@ function showAddUserModal(onSaved){
       return;
     }
     const isAutoUserId = overlay.querySelector('input[name="auUserIdMode"]:checked').value === 'auto';
-    const isAutoPassword = overlay.querySelector('input[name="auPasswordMode"]:checked').value === 'auto';
     if(!isAutoUserId && !userIdInput.value.trim()){
       errorEl.textContent = 'Enter a User ID, or choose Auto-generate.';
       return;
     }
-    if(!isAutoPassword && !passwordInput.value){
-      errorEl.textContent = 'Enter a password, or choose Auto-generate.';
+    if(!passwordInput.value){
+      errorEl.textContent = 'Enter a password, or use one of the Auto buttons below the field.';
       return;
     }
 
@@ -3321,13 +3396,13 @@ function showAddUserModal(onSaved){
         const data = await runScript(
           'createUser',
           isAutoUserId ? '' : userIdInput.value.trim(),
-          isAutoPassword ? '' : passwordInput.value,
+          passwordInput.value,
           roleSelect.value,
           adminPassword,
           nameInput.value.trim(),
           actor,
           permissions,
-          isAutoPassword,
+          false,
           mobileInput.value.trim(),
           emailInput.value.trim(),
           schoolSelect.value,
@@ -3336,11 +3411,7 @@ function showAddUserModal(onSaved){
         if(!data.ok) throw new Error(data.error || 'Could not create user.');
         close();
         if(onSaved) await onSaved();
-        if(data.generatedPassword){
-          await showAlertModal(`User "${data.userId}" was created.\n\nUser ID: ${data.userId}\nPassword: ${data.generatedPassword}\n\nShare these credentials securely — they'll be required to set their own password on first login.`, 'User Created — Save These Credentials');
-        } else {
-          showToast(`User "${data.userId}" created successfully.`, 'success');
-        }
+        await showAlertModal(`User "${data.userId}" was created.\n\nUser ID: ${data.userId}\nPassword: ${passwordInput.value}\n\nShare these credentials securely.`, 'User Created — Save These Credentials');
       }catch(err){
         submitBtn.disabled = false;
         submitBtn.textContent = 'Create User';
