@@ -98,9 +98,10 @@ async function runLookup(){
     }
     const isDone = data.status === 'done';
     const contextLabel = type === 'hostel' ? data.hostelName : data.siteCode;
+    const idLine = [data.appNo, data.regNo].filter(Boolean).join(' · ');
     contentEl.innerHTML = `
       <div class="name">${escapeHtml(data.name)||'(no name)'}</div>
-      <div class="idline">${escapeHtml(data.appNo)||''}</div>
+      <div class="idline">${escapeHtml(idLine)||''}</div>
       <div class="status-badge ${isDone ? 'done' : 'pending'}">${isDone ? '✓ Verified' : '○ Pending'}</div>
       ${contextLabel ? `<div class="context">${escapeHtml(contextLabel)}</div>` : ''}
     `;
