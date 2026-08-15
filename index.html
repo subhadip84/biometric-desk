@@ -3925,6 +3925,7 @@ function showActivityLogModal(){
               <th style="padding:7px 10px; background:var(--color-bg); text-align:left; position:sticky; top:0;">Actor</th>
               <th style="padding:7px 10px; background:var(--color-bg); text-align:left; position:sticky; top:0;">Action</th>
               <th style="padding:7px 10px; background:var(--color-bg); text-align:left; position:sticky; top:0;">Details</th>
+              <th style="padding:7px 10px; background:var(--color-bg); text-align:left; position:sticky; top:0;">IP</th>
             </tr>
           </thead>
           <tbody>
@@ -3934,6 +3935,7 @@ function showActivityLogModal(){
                 <td style="padding:7px 10px; border-top:1px solid var(--color-border); font-weight:600;">${escapeHtml(e.actor)}</td>
                 <td style="padding:7px 10px; border-top:1px solid var(--color-border);">${escapeHtml(e.action)}</td>
                 <td style="padding:7px 10px; border-top:1px solid var(--color-border); color:var(--color-text-muted);">${escapeHtml(e.details)}</td>
+                <td style="padding:7px 10px; border-top:1px solid var(--color-border); font-family:var(--font-mono); color:var(--color-text-muted); white-space:nowrap;">${escapeHtml(e.ip)}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -3977,8 +3979,8 @@ function showActivityLogModal(){
 
     doc.autoTable({
       startY: 32,
-      head: [['Time', 'Actor', 'Action', 'Details']],
-      body: filtered.map(e => [e.timestamp, e.actor, e.action, e.details]),
+      head: [['Time', 'Actor', 'Action', 'Details', 'IP']],
+      body: filtered.map(e => [e.timestamp, e.actor, e.action, e.details, e.ip]),
       styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [27, 42, 74] },
       alternateRowStyles: { fillColor: [245, 246, 249] }
