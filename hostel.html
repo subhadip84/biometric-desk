@@ -1170,7 +1170,7 @@ function setupHostelDragReorder(){
     const handle = document.createElement('div');
     handle.innerHTML = '⠿';
     handle.title = 'Drag to reorder';
-    handle.style.cssText = 'position:absolute; top:8px; left:50%; transform:translateX(-50%); cursor:grab; color:var(--color-text-muted); font-size:14px; user-select:none; line-height:1;';
+    handle.style.cssText = 'position:absolute; top:8px; left:20px; cursor:grab; color:var(--color-text-muted); font-size:14px; user-select:none; line-height:1;';
     panel.appendChild(handle);
 
     panel.addEventListener('dragstart', () => { panel.style.opacity = '.4'; });
