@@ -610,9 +610,12 @@
   </div>
 
   <div class="panel" id="duplicateCheckPanel" style="display:none; margin-top:24px;">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; gap:8px;">
       <h2 style="margin:0;">Possible Duplicate Names</h2>
-      <button class="btn btn-primary" id="duplicateCheckBtn" style="flex-shrink:0;">Check now</button>
+      <div style="display:flex; gap:6px; flex-shrink:0;">
+        <button class="btn btn-ghost" id="duplicateCheckClearBtn" style="display:none;">Clear</button>
+        <button class="btn btn-primary" id="duplicateCheckBtn">Check now</button>
+      </div>
     </div>
     <div style="font-size:11.5px; color:var(--color-text-muted); margin-bottom:12px;">Scans for similarly-spelled names that might be the same student entered twice</div>
     <div id="duplicateCheckContent"></div>
@@ -2316,10 +2319,11 @@ function setupDragReorder(){
     panel.dataset.dragReady = 'true';
     panel.draggable = true;
     panel.style.position = 'relative';
+    panel.style.paddingTop = '30px';
     const handle = document.createElement('div');
     handle.innerHTML = '⠿';
     handle.title = 'Drag to reorder';
-    handle.style.cssText = 'position:absolute; top:10px; right:14px; cursor:grab; color:var(--color-text-muted); font-size:16px; user-select:none;';
+    handle.style.cssText = 'position:absolute; top:8px; left:50%; transform:translateX(-50%); cursor:grab; color:var(--color-text-muted); font-size:14px; user-select:none; line-height:1;';
     panel.appendChild(handle);
 
     panel.addEventListener('dragstart', () => { panel.style.opacity = '.4'; });
@@ -2375,20 +2379,30 @@ async function renderLeaderboard(){
 }
 
 const duplicateCheckBtn = document.getElementById('duplicateCheckBtn');
+const duplicateCheckClearBtn = document.getElementById('duplicateCheckClearBtn');
+if(duplicateCheckClearBtn){
+  duplicateCheckClearBtn.addEventListener('click', () => {
+    document.getElementById('duplicateCheckContent').innerHTML = '';
+    duplicateCheckClearBtn.style.display = 'none';
+  });
+}
 if(duplicateCheckBtn){
   duplicateCheckBtn.addEventListener('click', async () => {
     const contentEl = document.getElementById('duplicateCheckContent');
     duplicateCheckBtn.disabled = true;
     duplicateCheckBtn.textContent = 'Checking…';
+    if(duplicateCheckClearBtn) duplicateCheckClearBtn.style.display = 'none';
     contentEl.innerHTML = `<div class="skeleton-line" style="width:70%;"></div><div class="skeleton-line" style="width:45%;"></div>`;
     try{
       const data = await runScript('findDuplicateStudents');
       if(!data.ok){
         contentEl.innerHTML = `<div style="font-size:12.5px; color:var(--color-text-muted);">${escapeHtml(data.error || 'Could not check right now.')}</div>`;
+        if(duplicateCheckClearBtn) duplicateCheckClearBtn.style.display = 'inline-flex';
         return;
       }
       if(!data.pairs.length){
         contentEl.innerHTML = `<div style="font-size:12.5px; color:var(--color-text-muted);">No likely duplicates found.</div>`;
+        if(duplicateCheckClearBtn) duplicateCheckClearBtn.style.display = 'inline-flex';
         return;
       }
       contentEl.innerHTML = data.pairs.map(p => `
@@ -2401,11 +2415,13 @@ if(duplicateCheckBtn){
           <div style="font-size:11px; color:var(--color-pending); flex-shrink:0;">${p.similarity}% similar</div>
         </div>
       `).join('');
+      if(duplicateCheckClearBtn) duplicateCheckClearBtn.style.display = 'inline-flex';
       contentEl.querySelectorAll('.dup-link').forEach(el => {
         el.addEventListener('click', () => selectStudent(el.dataset.id));
       });
     }catch(err){
       contentEl.innerHTML = `<div style="font-size:12px; color:var(--color-text-muted);">Could not check right now.</div>`;
+      if(duplicateCheckClearBtn) duplicateCheckClearBtn.style.display = 'inline-flex';
     }finally{
       duplicateCheckBtn.disabled = false;
       duplicateCheckBtn.textContent = 'Check now';
