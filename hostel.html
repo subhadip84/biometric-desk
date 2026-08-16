@@ -390,7 +390,6 @@ if(isAdminOrDemo){
   document.getElementById('hostelSpotCheckPanel').style.display = 'flex';
   document.getElementById('hostelLeaderboardPanel').style.display = 'block';
   document.getElementById('hostelDuplicateCheckPanel').style.display = 'block';
-  setupHostelDragReorder();
   ['hostelActivityLogBtn', 'hostelEodSummaryBtn', 'downloadCsvBtn', 'importNewBtn', 'importVerifyBtn'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = 'block';
@@ -937,7 +936,7 @@ function renderStats(){
   const verifiedToday = hostel.filter(s => s.status === 'done' && s.verifiedAt && s.verifiedAt.indexOf(todayStr) === 0).length;
   document.getElementById('verifiedTodayCount').textContent = verifiedToday;
 
-  if(isAdminOrDemo){ renderHostelSummary(); renderHostelTrendChart(); renderHostelForecast(); renderHostelUnusualActivity(); renderHostelOnlineUsers(); renderHostelLeaderboard(); }
+  if(isAdminOrDemo){ renderHostelSummary(); renderHostelTrendChart(); renderHostelForecast(); renderHostelUnusualActivity(); renderHostelOnlineUsers(); renderHostelLeaderboard(); setupHostelDragReorder(); }
 }
 
 let hostelSummaryChartInstance = null;
