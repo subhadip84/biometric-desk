@@ -158,7 +158,7 @@
   <div style="width:52px; height:52px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(0,0,0,.1);">
     <div style="width:26px; height:26px; border:3px solid var(--color-border); border-top-color:var(--color-gold); border-radius:50%; animation:hostelSpin .8s linear infinite;"></div>
   </div>
-  <div style="font-family:var(--font-display); font-size:14px; color:var(--color-heading); font-weight:600;">Loading your roster…</div>
+  <div id="loadingSplashText" style="font-family:var(--font-display); font-size:14px; color:var(--color-heading); font-weight:600;">Loading your roster…</div>
 </div>
 
 <div id="toastContainer"></div>
@@ -857,6 +857,18 @@ setInterval(updateLastRefreshedLabel, 5000);
 async function loadHostelData(){
   const refreshIcon = document.getElementById('refreshIcon');
   if(refreshIcon) refreshIcon.classList.add('spinning');
+  const loadingSplashAtStart = document.getElementById('loadingSplash');
+  let countdownTimer = null;
+  if(loadingSplashAtStart){
+    let secondsLeft = 5;
+    const textEl = document.getElementById('loadingSplashText');
+    countdownTimer = setInterval(() => {
+      secondsLeft--;
+      if(!textEl) return;
+      textEl.textContent = secondsLeft > 0 ? `Loading your roster… ${secondsLeft}s` : 'Almost there…';
+      if(secondsLeft <= 0) clearInterval(countdownTimer);
+    }, 1000);
+  }
   try{
     const data = await runScript('getHostelData');
     if(!data.ok){ showToast(data.error || 'Could not load hostel data.', 'error'); return; }
@@ -868,11 +880,13 @@ async function loadHostelData(){
     renderTable();
     const loadingSplash = document.getElementById('loadingSplash');
     if(loadingSplash) loadingSplash.remove();
+    if(countdownTimer) clearInterval(countdownTimer);
     handleLookupDeepLink();
   }catch(err){
     showToast(err.message, 'error');
     const loadingSplashOnError = document.getElementById('loadingSplash');
     if(loadingSplashOnError) loadingSplashOnError.remove();
+    if(countdownTimer) clearInterval(countdownTimer);
   }finally{
     if(refreshIcon) refreshIcon.classList.remove('spinning');
   }
@@ -1160,6 +1174,7 @@ const HOSTEL_PANEL_ORDER_KEY = 'bioDeskHostelPanelOrder';
 function setupHostelDragReorder(){
   const panels = HOSTEL_REORDERABLE_PANEL_IDS.map(id => document.getElementById(id)).filter(Boolean);
   if(!panels.length) return;
+  let draggedPanel = null;
 
   panels.forEach(panel => {
     if(panel.dataset.dragReady) return;
@@ -1173,9 +1188,14 @@ function setupHostelDragReorder(){
     handle.style.cssText = 'position:absolute; top:8px; left:20px; cursor:grab; color:var(--color-text-muted); font-size:14px; user-select:none; line-height:1;';
     panel.appendChild(handle);
 
-    panel.addEventListener('dragstart', () => { panel.style.opacity = '.4'; });
+    panel.addEventListener('dragstart', (e) => {
+      draggedPanel = panel;
+      panel.style.opacity = '.4';
+      if(e.dataTransfer){ e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', panel.id); }
+    });
     panel.addEventListener('dragend', () => {
       panel.style.opacity = '1';
+      draggedPanel = null;
       const newOrder = HOSTEL_REORDERABLE_PANEL_IDS
         .map(id => document.getElementById(id))
         .filter(Boolean)
@@ -1185,12 +1205,12 @@ function setupHostelDragReorder(){
     });
     panel.addEventListener('dragover', (e) => {
       e.preventDefault();
-      const dragging = panels.find(p => p.style.opacity === '.4');
-      if(!dragging || dragging === panel) return;
+      if(!draggedPanel || draggedPanel === panel) return;
       const rect = panel.getBoundingClientRect();
       const before = (e.clientY - rect.top) < rect.height / 2;
-      panel.parentNode.insertBefore(dragging, before ? panel : panel.nextSibling);
+      panel.parentNode.insertBefore(draggedPanel, before ? panel : panel.nextSibling);
     });
+    panel.addEventListener('drop', (e) => { e.preventDefault(); });
   });
 
   try{
