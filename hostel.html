@@ -1638,7 +1638,7 @@ function generateEodSummary(){
   if(!printArea) return;
   printArea.innerHTML = `
     <div class="print-header">
-      <img src="${document.querySelector('.login-logo')?.src || ''}" alt="Adamas University" style="height:34px; width:auto;">
+      <img src="${ADAMAS_LOGO_SRC}" alt="Adamas University" style="height:34px; width:auto;">
       <div>Adamas University · Hostel Face Capture Desk — Daily Summary</div>
     </div>
     <h2 style="font-family:var(--font-display); margin:0 0 4px;">${new Date().toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}</h2>
