@@ -28,7 +28,7 @@
     --color-pending:#e0654a; --color-pending-soft:#2e1712;
     --color-border:#30363d; --color-text:#e6edf3; --color-text-muted:#8b949e;
   }
-  body.focus-mode #statsRowPanel, body.focus-mode #hostelSummaryPanel, body.focus-mode #hostelTrendChartPanel, body.focus-mode #hostelForecastPanel, body.focus-mode #hostelUnusualActivityPanel, body.focus-mode #hostelOnlineUsersPanel, body.focus-mode #hostelSpotCheckPanel, body.focus-mode #hostelLeaderboardPanel{
+  body.focus-mode #statsRowPanel, body.focus-mode #hostelSummaryPanel, body.focus-mode #hostelTrendChartPanel, body.focus-mode #hostelForecastPanel, body.focus-mode #hostelUnusualActivityPanel, body.focus-mode #hostelOnlineUsersPanel, body.focus-mode #hostelSpotCheckPanel, body.focus-mode #hostelLeaderboardPanel, body.focus-mode #hostelDuplicateCheckPanel{
     display:none !important;
   }
   @media print{
@@ -184,6 +184,7 @@
         <button class="menu-item" id="changePasswordBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="12" r="4"/><path d="M11 12h9m-4 0v4m4-4v3"/></svg>Change Password</button>
         <a class="menu-item" id="backToMainLink" href="index.html" style="text-decoration:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back to Main App</a>
         <button class="menu-item" id="hostelActivityLogBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>Activity Log</button>
+        <button class="menu-item" id="hostelEodSummaryBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>End of Day Summary</button>
         <button class="menu-item" id="downloadCsvBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Download Report (CSV)</button>
         <button class="menu-item" id="importNewBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg>Import New Hostel Data</button>
         <button class="menu-item" id="importVerifyBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Import Face Capture Updates</button>
@@ -318,6 +319,15 @@
         <div style="font-size:11.5px; color:var(--color-text-muted); margin-bottom:12px;">Verifications completed in the last 7 days</div>
         <div id="hostelLeaderboardContent"></div>
       </div>
+
+      <div class="panel" id="hostelDuplicateCheckPanel" style="margin-top:20px; display:none;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+          <h2 style="margin:0;">Possible Duplicate Names</h2>
+          <button class="btn btn-primary" id="hostelDuplicateCheckBtn" style="flex-shrink:0;">Check now</button>
+        </div>
+        <div style="font-size:11.5px; color:var(--color-text-muted); margin-bottom:12px;">Scans for similarly-spelled names that might be the same student entered twice</div>
+        <div id="hostelDuplicateCheckContent"></div>
+      </div>
     </div>
   </div>
 </main>
@@ -352,6 +362,7 @@ const DEMO_KEY = 'bioDeskIsDemo';
 const HOSTELLER_ONLY_KEY = 'bioDeskIsHostellerOnly';
 const USERID_KEY = 'bioDeskUserId';
 const USERNAME_KEY = 'bioDeskUserName';
+const LOGIN_TIME_KEY = 'bioDeskLoginTime';
 const PERMISSIONS_KEY = 'bioDeskPermissions';
 const API_BASE_URL = 'https://biometric-backend-ijiv.onrender.com';
 
@@ -378,7 +389,9 @@ if(isAdminOrDemo){
   document.getElementById('hostelOnlineUsersPanel').style.display = 'block';
   document.getElementById('hostelSpotCheckPanel').style.display = 'flex';
   document.getElementById('hostelLeaderboardPanel').style.display = 'block';
-  ['hostelActivityLogBtn', 'downloadCsvBtn', 'importNewBtn', 'importVerifyBtn'].forEach(id => {
+  document.getElementById('hostelDuplicateCheckPanel').style.display = 'block';
+  setupHostelDragReorder();
+  ['hostelActivityLogBtn', 'hostelEodSummaryBtn', 'downloadCsvBtn', 'importNewBtn', 'importVerifyBtn'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = 'block';
   });
@@ -526,7 +539,37 @@ function logout(reason, successMessage){
   else if(successMessage) url += '?loggedOutSuccess=' + encodeURIComponent(successMessage);
   window.location.href = url;
 }
-document.getElementById('logoutBtn').addEventListener('click', () => logout(null, 'You have been logged out successfully.'));
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  const loginTimeStr = sessionStorage.getItem(LOGIN_TIME_KEY);
+  const actorName = sessionStorage.getItem(USERNAME_KEY);
+  if(loginTimeStr && actorName){
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-box" style="max-width:360px;">
+        <h3>Shift Handoff Note</h3>
+        <div id="handoffNoteContent" style="font-size:12.5px; color:var(--color-text); line-height:1.6; min-height:40px;">
+          <div class="skeleton-line" style="width:90%;"></div><div class="skeleton-line" style="width:70%;"></div>
+        </div>
+        <button class="btn btn-primary" id="handoffLogoutBtn" style="width:100%; margin-top:14px;">Log Out</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    runScript('generateShiftHandoffNote', actorName, Number(loginTimeStr)).then(data => {
+      const noteEl = document.getElementById('handoffNoteContent');
+      if(noteEl) noteEl.textContent = (data.ok && data.note) ? data.note : 'Could not generate a handoff note this time.';
+    }).catch(() => {
+      const noteEl = document.getElementById('handoffNoteContent');
+      if(noteEl) noteEl.textContent = 'Could not generate a handoff note this time.';
+    });
+    overlay.querySelector('#handoffLogoutBtn').addEventListener('click', () => {
+      overlay.remove();
+      logout(null, 'You have been logged out successfully.');
+    });
+  } else {
+    logout(null, 'You have been logged out successfully.');
+  }
+});
 
 // Catches the case where someone closes the tab/browser entirely, without
 // clicking Logout or waiting for the 30-minute auto-logout. Regular fetch()
@@ -1054,7 +1097,7 @@ async function renderHostelUnusualActivity(){
       contentEl.innerHTML = `<div style="font-size:12.5px; color:var(--color-text-muted);">Nothing unusual in the last 7 days.</div>`;
       return;
     }
-    contentEl.innerHTML = data.flags.map(f => {
+    contentEl.innerHTML = `<div id="hostelAnomalyAiExplanation"></div>` + data.flags.map(f => {
       const icon = f.type === 'burst' ? '⚡' : '🌙';
       const label = f.type === 'burst' ? 'High-volume burst' : 'Off-hours activity';
       return `
@@ -1067,6 +1110,12 @@ async function renderHostelUnusualActivity(){
         </div>
       `;
     }).join('');
+    runScript('explainUnusualActivity', data.flags).then(exp => {
+      const aiEl = document.getElementById('hostelAnomalyAiExplanation');
+      if(aiEl && exp.ok && exp.explanation){
+        aiEl.innerHTML = `<div style="background:var(--color-gold-soft); border-radius:8px; padding:8px 10px; font-size:11.5px; color:var(--color-heading); margin-bottom:6px;">💡 ${escapeHtml(exp.explanation)}</div>`;
+      }
+    }).catch(() => {});
   }catch(err){
     contentEl.innerHTML = `<div style="font-size:12px; color:var(--color-text-muted);">Could not check for unusual activity right now.</div>`;
   }
@@ -1103,6 +1152,53 @@ async function renderHostelOnlineUsers(){
   }
 }
 
+const HOSTEL_REORDERABLE_PANEL_IDS = ['hostelSummaryPanel', 'hostelTrendChartPanel', 'hostelForecastPanel', 'hostelUnusualActivityPanel', 'hostelOnlineUsersPanel', 'hostelSpotCheckPanel', 'hostelLeaderboardPanel', 'hostelDuplicateCheckPanel'];
+const HOSTEL_PANEL_ORDER_KEY = 'bioDeskHostelPanelOrder';
+
+function setupHostelDragReorder(){
+  const panels = HOSTEL_REORDERABLE_PANEL_IDS.map(id => document.getElementById(id)).filter(Boolean);
+  if(!panels.length) return;
+
+  panels.forEach(panel => {
+    if(panel.dataset.dragReady) return;
+    panel.dataset.dragReady = 'true';
+    panel.draggable = true;
+    panel.style.position = 'relative';
+    const handle = document.createElement('div');
+    handle.innerHTML = '⠿';
+    handle.title = 'Drag to reorder';
+    handle.style.cssText = 'position:absolute; top:10px; right:14px; cursor:grab; color:var(--color-text-muted); font-size:16px; user-select:none;';
+    panel.appendChild(handle);
+
+    panel.addEventListener('dragstart', () => { panel.style.opacity = '.4'; });
+    panel.addEventListener('dragend', () => {
+      panel.style.opacity = '1';
+      const newOrder = HOSTEL_REORDERABLE_PANEL_IDS
+        .map(id => document.getElementById(id))
+        .filter(Boolean)
+        .sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1)
+        .map(el => el.id);
+      localStorage.setItem(HOSTEL_PANEL_ORDER_KEY, JSON.stringify(newOrder));
+    });
+    panel.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      const dragging = panels.find(p => p.style.opacity === '.4');
+      if(!dragging || dragging === panel) return;
+      const rect = panel.getBoundingClientRect();
+      const before = (e.clientY - rect.top) < rect.height / 2;
+      panel.parentNode.insertBefore(dragging, before ? panel : panel.nextSibling);
+    });
+  });
+
+  try{
+    const savedOrder = JSON.parse(localStorage.getItem(HOSTEL_PANEL_ORDER_KEY) || '[]');
+    savedOrder.forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.parentNode.appendChild(el);
+    });
+  }catch(e){ /* ignore malformed saved order */ }
+}
+
 async function renderHostelLeaderboard(){
   const contentEl = document.getElementById('hostelLeaderboardContent');
   if(!contentEl) return;
@@ -1124,6 +1220,45 @@ async function renderHostelLeaderboard(){
   }catch(err){
     contentEl.innerHTML = `<div style="font-size:12px; color:var(--color-text-muted);">Could not load the leaderboard right now.</div>`;
   }
+}
+
+const hostelDuplicateCheckBtn = document.getElementById('hostelDuplicateCheckBtn');
+if(hostelDuplicateCheckBtn){
+  hostelDuplicateCheckBtn.addEventListener('click', async () => {
+    const contentEl = document.getElementById('hostelDuplicateCheckContent');
+    hostelDuplicateCheckBtn.disabled = true;
+    hostelDuplicateCheckBtn.textContent = 'Checking…';
+    contentEl.innerHTML = `<div class="skeleton-line" style="width:70%;"></div><div class="skeleton-line" style="width:45%;"></div>`;
+    try{
+      const data = await runScript('findDuplicateHostelStudents');
+      if(!data.ok){
+        contentEl.innerHTML = `<div style="font-size:12.5px; color:var(--color-text-muted);">${escapeHtml(data.error || 'Could not check right now.')}</div>`;
+        return;
+      }
+      if(!data.pairs.length){
+        contentEl.innerHTML = `<div style="font-size:12.5px; color:var(--color-text-muted);">No likely duplicates found.</div>`;
+        return;
+      }
+      contentEl.innerHTML = data.pairs.map(p => `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid var(--color-border);">
+          <div style="font-size:12px; flex:1; min-width:0;">
+            <span class="dup-link" data-id="${p.idA}" style="color:var(--color-navy); cursor:pointer; text-decoration:underline;">${escapeHtml(p.nameA)}</span>
+            <span style="color:var(--color-text-muted);"> vs </span>
+            <span class="dup-link" data-id="${p.idB}" style="color:var(--color-navy); cursor:pointer; text-decoration:underline;">${escapeHtml(p.nameB)}</span>
+          </div>
+          <div style="font-size:11px; color:var(--color-pending); flex-shrink:0;">${p.similarity}% similar</div>
+        </div>
+      `).join('');
+      contentEl.querySelectorAll('.dup-link').forEach(el => {
+        el.addEventListener('click', () => selectStudent(el.dataset.id));
+      });
+    }catch(err){
+      contentEl.innerHTML = `<div style="font-size:12px; color:var(--color-text-muted);">Could not check right now.</div>`;
+    }finally{
+      hostelDuplicateCheckBtn.disabled = false;
+      hostelDuplicateCheckBtn.textContent = 'Check now';
+    }
+  });
 }
 
 const hostelSpotCheckBtn = document.getElementById('hostelSpotCheckBtn');
@@ -1463,6 +1598,56 @@ function showQrCodeModal(s){
 
   overlay.querySelector('#qrCloseBtn').addEventListener('click', () => overlay.remove());
 }
+
+function generateEodSummary(){
+  const totalStudents = hostel.length;
+  const totalDone = hostel.filter(s => s.status === 'done').length;
+  const overallPercent = totalStudents ? Math.round((totalDone / totalStudents) * 100) : 0;
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const verifiedToday = hostel.filter(s => s.status === 'done' && s.verifiedAt && s.verifiedAt.indexOf(todayStr) === 0).length;
+
+  const hostelMap = {};
+  hostel.forEach(s => {
+    const h = s.hostelName || '(No Hostel Assigned)';
+    if(!hostelMap[h]) hostelMap[h] = { total: 0, done: 0 };
+    hostelMap[h].total++;
+    if(s.status === 'done') hostelMap[h].done++;
+  });
+  const hostelStats = Object.keys(hostelMap).map(h => ({
+    hostelName: h, percent: hostelMap[h].total ? Math.round((hostelMap[h].done / hostelMap[h].total) * 100) : 0, total: hostelMap[h].total
+  })).sort((a, b) => a.percent - b.percent);
+  const laggingHostels = hostelStats.slice(0, 5);
+
+  const printArea = document.getElementById('studentPrintArea');
+  if(!printArea) return;
+  printArea.innerHTML = `
+    <div class="print-header">
+      <img src="${document.querySelector('.login-logo')?.src || ''}" alt="Adamas University" style="height:34px; width:auto;">
+      <div>Adamas University · Hostel Face Capture Desk — Daily Summary</div>
+    </div>
+    <h2 style="font-family:var(--font-display); margin:0 0 4px;">${new Date().toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}</h2>
+    <table style="width:100%; border-collapse:collapse; font-size:13px; margin:16px 0;">
+      <tr><td style="padding:8px; border:1px solid #ccc; text-align:center; width:33%;"><div style="font-size:22px; font-weight:700;">${verifiedToday}</div>Verified today</td>
+      <td style="padding:8px; border:1px solid #ccc; text-align:center; width:33%;"><div style="font-size:22px; font-weight:700;">${overallPercent}%</div>Overall complete</td>
+      <td style="padding:8px; border:1px solid #ccc; text-align:center; width:33%;"><div style="font-size:22px; font-weight:700;">${totalDone}/${totalStudents}</div>Total verified</td></tr>
+    </table>
+    <h3 style="font-family:var(--font-display); font-size:14px; margin:16px 0 6px;">Hostels needing attention</h3>
+    <table style="width:100%; border-collapse:collapse; font-size:12px;">
+      <tr><td style="padding:5px; border-bottom:1px solid #ddd; font-weight:600;">Hostel</td><td style="padding:5px; border-bottom:1px solid #ddd; font-weight:600;">Completion</td><td style="padding:5px; border-bottom:1px solid #ddd; font-weight:600;">Total</td></tr>
+      ${laggingHostels.map(h => `<tr><td style="padding:5px; border-bottom:1px solid #eee;">${escapeHtml(h.hostelName)}</td><td style="padding:5px; border-bottom:1px solid #eee;">${h.percent}%</td><td style="padding:5px; border-bottom:1px solid #eee;">${h.total}</td></tr>`).join('')}
+    </table>
+    <div style="margin-top:20px; font-size:11px; color:#888;">Generated ${new Date().toLocaleString('en-IN')}</div>
+  `;
+  document.body.classList.add('printing-single-student');
+  function cleanup(){
+    document.body.classList.remove('printing-single-student');
+    window.removeEventListener('afterprint', cleanup);
+  }
+  window.addEventListener('afterprint', cleanup);
+  window.print();
+}
+document.getElementById('hostelEodSummaryBtn')?.addEventListener('click', generateEodSummary);
 
 function printHostelStudentDetail(s){
   const isDone = s.status === 'done';
@@ -2047,14 +2232,14 @@ function findHostelHelpAnswer(text){
   return { answer: "I don't have an answer for that yet — try one of the questions below, or contact AKC IT Support for anything else.", matchedQuestion: null };
 }
 
-function appendHelpMessage(text, fromUser){
+function appendHelpMessage(text, fromUser, allowHtml){
   const messagesEl = document.getElementById('helpChatMessages');
   if(!messagesEl) return;
   const bubble = document.createElement('div');
   bubble.style.cssText = fromUser
     ? 'background:var(--color-navy); color:#fff; border-radius:10px; padding:8px 10px; font-size:12px; align-self:flex-end; max-width:85%;'
     : 'background:#F0F2F6; border-radius:10px; padding:8px 10px; font-size:12px; color:var(--color-navy-deep); align-self:flex-start; max-width:85%;';
-  bubble.textContent = text;
+  if(allowHtml) bubble.innerHTML = text; else bubble.textContent = text;
   messagesEl.appendChild(bubble);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
@@ -2366,6 +2551,31 @@ async function submitHelpQuestion(){
   thinkingBubble.textContent = 'Thinking…';
   messagesEl.appendChild(thinkingBubble);
   messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  try{
+    const filterData = await runScript('parseRosterFilterQuery', text);
+    if(filterData.ok && filterData.isFilterRequest){
+      thinkingBubble.remove();
+      let matches = hostel.slice();
+      if(filterData.siteCode) matches = matches.filter(s => (s.hostelName||'').toLowerCase().includes(filterData.siteCode.toLowerCase()));
+      if(filterData.status) matches = matches.filter(s => s.status === filterData.status);
+      if(filterData.nameContains) matches = matches.filter(s => (s.studentName||'').toLowerCase().includes(filterData.nameContains.toLowerCase()));
+
+      if(!matches.length){
+        appendHelpMessage('No students matched that. Try rephrasing, or use the main search box for exact App No/Reg No lookups.', false);
+      } else {
+        const resultsHtml = matches.slice(0, 15).map(s =>
+          `<div class="help-result-link" data-id="${s.id}" style="padding:5px 0; cursor:pointer; text-decoration:underline; color:var(--color-navy);">${escapeHtml(s.studentName)||'(no name)'} <span style="color:var(--color-text-muted); text-decoration:none;">— ${s.status==='done'?'Verified':'Pending'}</span></div>`
+        ).join('');
+        const moreText = matches.length > 15 ? `<div style="font-size:11px; color:var(--color-text-muted); margin-top:4px;">+ ${matches.length - 15} more — try narrowing your search.</div>` : '';
+        appendHelpMessage(`Found ${matches.length} matching student(s):<div style="margin-top:6px;">${resultsHtml}</div>${moreText}`, false, true);
+        document.querySelectorAll('.help-result-link').forEach(el => {
+          el.addEventListener('click', () => { selectStudent(el.dataset.id); document.getElementById('helpChatPanel').style.display = 'none'; });
+        });
+      }
+      return;
+    }
+  }catch(err){ /* filter-intent check failed - fall through to normal AI help below */ }
 
   try{
     const data = await runScript('askAiHelpAssistant', text);
