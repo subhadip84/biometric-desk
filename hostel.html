@@ -558,10 +558,10 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
     document.body.appendChild(overlay);
     runScript('generateShiftHandoffNote', actorName, Number(loginTimeStr)).then(data => {
       const noteEl = document.getElementById('handoffNoteContent');
-      if(noteEl) noteEl.textContent = (data.ok && data.note) ? data.note : 'Could not generate a handoff note this time.';
-    }).catch(() => {
+      if(noteEl) noteEl.textContent = (data.ok && data.note) ? data.note : `Could not generate a handoff note — ${data.error || 'unknown error'}`;
+    }).catch(err => {
       const noteEl = document.getElementById('handoffNoteContent');
-      if(noteEl) noteEl.textContent = 'Could not generate a handoff note this time.';
+      if(noteEl) noteEl.textContent = `Could not generate a handoff note — ${err.message || 'network error'}`;
     });
     overlay.querySelector('#handoffLogoutBtn').addEventListener('click', () => {
       overlay.remove();
