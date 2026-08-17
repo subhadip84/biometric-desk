@@ -1151,6 +1151,7 @@ function showTodayVerifiedModal(){
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
+    close();
   });
 
   closeBtn.addEventListener('click', close);
@@ -2048,6 +2049,7 @@ function showSummaryDetailModal(siteFilter, statusFilter){
     errorEl.textContent = '';
     try{
       const rowCount = await performCsvDownload(statusFilter, siteFilter, downloadBtn);
+      close();
       showToast(`Downloaded ${rowCount} row(s).`, 'success');
     }catch(err){
       errorEl.textContent = err.message;
