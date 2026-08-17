@@ -3437,9 +3437,9 @@ function showAddUserModal(onSaved){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:440px;">
-      <h3>Add New User</h3>
-
+    <div class="modal-box" style="max-width:440px; overflow:hidden; display:flex; flex-direction:column; max-height:88vh;">
+      <h3 style="flex-shrink:0;">Add New User</h3>
+      <div style="overflow-y:auto; flex:1; min-height:0;">
       <input type="text" id="auName" placeholder="Full Name" autocomplete="off">
       <input type="text" id="auMobile" placeholder="Mobile No" autocomplete="off" style="margin-top:8px;">
       <div id="auMobileStatus" style="font-size:11.5px; margin-top:2px; min-height:14px;"></div>
@@ -3473,10 +3473,11 @@ function showAddUserModal(onSaved){
         </div>
         ${PERMISSION_CHECKBOX_HTML}
       </div>
+      </div>
 
-      <div class="modal-error" id="auError" style="margin-top:10px;"></div>
-      <button class="btn btn-primary btn-block" id="auSubmitBtn">Create User</button>
-      <button class="btn btn-ghost btn-block" id="auCloseBtn" style="margin-top:8px;">Close</button>
+      <div class="modal-error" id="auError" style="margin-top:10px; flex-shrink:0;"></div>
+      <button class="btn btn-primary btn-block" id="auSubmitBtn" style="flex-shrink:0;">Create User</button>
+      <button class="btn btn-ghost btn-block" id="auCloseBtn" style="margin-top:8px; flex-shrink:0;">Close</button>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -3655,10 +3656,10 @@ function showEditUserModal(user, onSaved){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:440px;">
-      <h3>Edit User</h3>
-      <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:10px;">User ID: <strong>${escapeHtml(user.userId)}</strong> (cannot be changed)</div>
-
+    <div class="modal-box" style="max-width:440px; overflow:hidden; display:flex; flex-direction:column; max-height:88vh;">
+      <h3 style="flex-shrink:0;">Edit User</h3>
+      <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:10px; flex-shrink:0;">User ID: <strong>${escapeHtml(user.userId)}</strong> (cannot be changed)</div>
+      <div style="overflow-y:auto; flex:1; min-height:0;">
       <input type="text" id="euName" placeholder="Full Name" autocomplete="off" value="${escapeHtml(user.name || '')}">
       <input type="text" id="euMobile" placeholder="Mobile No" autocomplete="off" value="${escapeHtml(user.mobile || '')}" style="margin-top:8px;">
       <div id="euMobileStatus" style="font-size:11.5px; margin-top:2px; min-height:14px;"></div>
@@ -3680,10 +3681,11 @@ function showEditUserModal(user, onSaved){
         </div>
         ${PERMISSION_CHECKBOX_HTML}
       </div>
+      </div>
 
-      <div class="modal-error" id="euError" style="margin-top:10px;"></div>
-      <button class="btn btn-primary btn-block" id="euSubmitBtn">Update User</button>
-      <button class="btn btn-ghost btn-block" id="euCloseBtn" style="margin-top:8px;">Close</button>
+      <div class="modal-error" id="euError" style="margin-top:10px; flex-shrink:0;"></div>
+      <button class="btn btn-primary btn-block" id="euSubmitBtn" style="flex-shrink:0;">Update User</button>
+      <button class="btn btn-ghost btn-block" id="euCloseBtn" style="margin-top:8px; flex-shrink:0;">Close</button>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -3920,9 +3922,9 @@ function showComposeMessageModal(){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:480px;">
-      <h3>Compose Message</h3>
-
+    <div class="modal-box" style="max-width:480px; overflow:hidden; display:flex; flex-direction:column; max-height:88vh;">
+      <h3 style="flex-shrink:0;">Compose Message</h3>
+      <div style="overflow-y:auto; flex:1; min-height:0;">
       <div id="cmExistingLabel" style="font-size:12px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px; display:none;">Active messages</div>
       <div id="cmExistingList" style="max-height:180px; overflow-y:auto; margin-bottom:10px;"></div>
 
@@ -3949,10 +3951,11 @@ function showComposeMessageModal(){
       </div>
       <input type="password" id="cmAdminPassword" placeholder="Admin password (to authorize)" autocomplete="off" style="margin-top:10px;">
       <div class="modal-error" id="cmError" style="margin-top:8px;"></div>
-      <div class="modal-actions">
+      </div>
+      <div class="modal-actions" style="flex-shrink:0;">
         <button class="btn btn-primary" id="cmPublishBtn" style="flex:1;">Publish New Message</button>
       </div>
-      <button class="btn btn-ghost" id="cmCloseBtn" style="width:100%; margin-top:8px;">Close</button>
+      <button class="btn btn-ghost" id="cmCloseBtn" style="width:100%; margin-top:8px; flex-shrink:0;">Close</button>
     </div>
   `;
   document.body.appendChild(overlay);
