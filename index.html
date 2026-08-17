@@ -2956,7 +2956,10 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
     document.body.appendChild(overlay);
     runScript('generateShiftHandoffNote', actorName, Number(loginTimeStr)).then(data => {
       const noteEl = document.getElementById('handoffNoteContent');
-      if(noteEl) noteEl.textContent = (data.ok && data.note) ? data.note : `Could not generate a handoff note — ${data.error || 'unknown error'}`;
+      if(noteEl){
+        if(data.ok) noteEl.textContent = data.note || 'No summary could be generated this time.';
+        else noteEl.textContent = `Could not generate a handoff note — ${data.error || 'unknown error'}`;
+      }
     }).catch(err => {
       const noteEl = document.getElementById('handoffNoteContent');
       if(noteEl) noteEl.textContent = `Could not generate a handoff note — ${err.message || 'network error'}`;
