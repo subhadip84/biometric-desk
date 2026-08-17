@@ -122,6 +122,11 @@
   thead th{ text-align:left; font-size:10px; text-transform:uppercase; color:var(--color-text-muted); border-bottom:1.5px solid var(--color-border); padding:8px; }
   tbody td{ padding:9px 8px; border-bottom:1px solid var(--color-border); }
   tbody tr{ cursor:pointer; }
+  .row-just-updated{ animation:rowUpdatePulse 1.6s ease-in-out 2; }
+  @keyframes rowUpdatePulse{
+    0%, 100%{ box-shadow:inset 0 0 0 0 rgba(99,153,34,0); }
+    50%{ box-shadow:inset 0 0 0 999px rgba(99,153,34,.08); }
+  }
   tbody tr:hover{ background:#F7F9FC; }
   .status-pill{ font-size:10.5px; padding:2px 9px; border-radius:20px; font-weight:600; }
   .status-pill.done{ background:var(--color-success-soft); color:var(--color-success); }
@@ -828,6 +833,7 @@ function initials(name){
 }
 
 let hostel = [];
+let previousRosterStatus = {};
 let lastRefreshTime = null;
 let hasHandledLookupDeepLink = false;
 function handleLookupDeepLink(){
@@ -1355,7 +1361,7 @@ function renderTable(){
   }
   if(!rows.length){ tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--color-text-muted);">No matching records.</td></tr>'; return; }
   tbody.innerHTML = rows.map(s => `
-    <tr data-id="${s.id}">
+    <tr data-id="${s.id}" class="${previousRosterStatus[s.id] !== undefined && previousRosterStatus[s.id] !== s.status ? 'row-just-updated' : ''}">
       <td>${escapeHtml(s.studentName)||'—'}</td>
       <td class="mono" style="font-family:var(--font-mono);">${escapeHtml(s.applicationNo)||'—'}</td>
       <td>${escapeHtml(s.hostelName)||'—'}</td>
@@ -1363,6 +1369,7 @@ function renderTable(){
       <td><span class="status-pill ${s.status}">${s.status==='done'?'Verified':'Pending'}</span>${getStatusSymbol(s)}${s.locked?' 🔒':''}</td>
     </tr>
   `).join('');
+  hostel.forEach(s => { previousRosterStatus[s.id] = s.status; });
   tbody.querySelectorAll('tr').forEach(tr => {
     tr.addEventListener('click', () => selectStudent(tr.dataset.id));
   });
