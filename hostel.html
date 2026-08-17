@@ -1862,7 +1862,7 @@ function showHostelCsvFilterModal(){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:340px;">
+    <div class="modal-box" style="max-width:340px; overflow:hidden;">
       <h3>Download Report (CSV)</h3>
       <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px;">Status</div>
       <select id="hCsvStatus" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13.5px; font-family:var(--font-body); margin-bottom:12px;">
@@ -1966,7 +1966,7 @@ function showHostelImportResultModal(added, skippedRows){
   }
 
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:520px;">
+    <div class="modal-box" style="max-width:520px; overflow:hidden;">
       <h3>Import Complete</h3>
       <div style="font-size:13.5px; color:var(--color-text); margin-bottom:4px;">
         <strong>${added}</strong> new student(s) added to the hostel sheet.
@@ -2044,7 +2044,7 @@ function showHostelImportModal(kind){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:520px;">
+    <div class="modal-box" style="max-width:520px; overflow:hidden;">
       <h3>${title}</h3>
       <p style="font-size:12.5px; color:var(--color-text-muted); margin:0 0 10px;">${desc}</p>
       <input type="file" id="hFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
