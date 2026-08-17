@@ -1088,7 +1088,7 @@ function showTodayVerifiedModal(){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:640px;">
+    <div class="modal-box" style="max-width:640px; overflow:hidden;">
       <h3>Verified Today</h3>
       <div style="font-size:12.5px; color:var(--color-text-muted); margin-bottom:10px;">${todayVerifiedList.length} student(s)</div>
       <div style="max-height:360px; overflow:auto; border:1px solid var(--color-border); border-radius:8px;">
@@ -2004,7 +2004,7 @@ function showSummaryDetailModal(siteFilter, statusFilter){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:640px;">
+    <div class="modal-box" style="max-width:640px; overflow:hidden;">
       <h3>${escapeHtml(titleText)}</h3>
       <div style="font-size:12.5px; color:var(--color-text-muted); margin-bottom:10px;">${matches.length} student(s)</div>
       <div style="max-height:360px; overflow:auto; border:1px solid var(--color-border); border-radius:8px;">
@@ -3328,7 +3328,7 @@ function showManageUsersModal(){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:420px;">
+    <div class="modal-box" style="max-width:420px; overflow:hidden;">
       <h3>Manage Users</h3>
       <div id="userListContainer" style="margin-bottom:14px; max-height:280px; overflow:auto;"></div>
       <button class="btn btn-primary btn-block" id="muAddNewBtn">Add New User</button>
@@ -4235,7 +4235,7 @@ function showHelpStatsModal(){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:480px;">
+    <div class="modal-box" style="max-width:480px; overflow:hidden;">
       <h3>Help Question Stats</h3>
       <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:10px;">Most-asked topics in the Help Assistant, across all users.</div>
       <div id="hsContent"></div>
@@ -4344,7 +4344,7 @@ function showImportStudentsModal(){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:520px;">
+    <div class="modal-box" style="max-width:520px; overflow:hidden;">
       <h3>Import New Students</h3>
       <p style="font-size:12.5px; color:var(--color-text-muted); margin:0 0 10px;">
         Upload an Excel (.xlsx) or CSV file with the new registrations. Columns are matched automatically —
@@ -4560,7 +4560,7 @@ function showImportVerificationModal(){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:520px;">
+    <div class="modal-box" style="max-width:520px; overflow:hidden;">
       <h3>Import Verification Updates</h3>
       <p style="font-size:12.5px; color:var(--color-text-muted); margin:0 0 10px;">
         Upload the biometric machine's completion report (Excel or CSV). Matching students are marked
