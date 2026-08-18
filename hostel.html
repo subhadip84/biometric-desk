@@ -379,6 +379,7 @@
 const SESSION_KEY = 'bioDeskLoggedIn';
 const ADMIN_KEY = 'bioDeskIsAdmin';
 const DEMO_KEY = 'bioDeskIsDemo';
+const VIEWER_KEY = 'bioDeskIsViewer';
 const HOSTELLER_ONLY_KEY = 'bioDeskIsHostellerOnly';
 const USERID_KEY = 'bioDeskUserId';
 const USERNAME_KEY = 'bioDeskUserName';
@@ -1744,6 +1745,7 @@ function renderDetail(s){
   const isDone = s.status === 'done';
   const locked = s.locked;
   const detailArea = document.getElementById('detailArea');
+  const isViewer = sessionStorage.getItem(VIEWER_KEY) === 'yes';
 
   const isHostellerVerified = isDone && s.verifiedBy.indexOf('[Hosteller]') !== -1;
   const isRevised = isDone && s.verifiedBy.indexOf('(Revised)') !== -1;
@@ -1787,6 +1789,7 @@ function renderDetail(s){
             </div>
           </div>
         ` : ''}
+        ${isViewer ? '' : `
         <div class="verify-controls">
           <div style="font-size:12.5px; font-weight:600; color:var(--color-text-muted); margin-bottom:10px;">Mark face capture status</div>
           <div class="radio-row">
@@ -1804,6 +1807,7 @@ function renderDetail(s){
             ${isAdminOrDemo ? '<button class="btn btn-ghost" id="unlockHostelBtn" style="margin-top:10px;">Unlock (admin)</button>' : ''}
           ` : ''}
         </div>
+        `}
         ${(isAdminOrDemo && !isDemo) ? `
           <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--color-border);">
             <button class="btn btn-ghost" id="deleteHostelStudentBtn" style="color:var(--color-pending); border-color:var(--color-pending-soft);">Delete Student</button>
