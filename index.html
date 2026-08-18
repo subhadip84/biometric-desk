@@ -432,6 +432,7 @@
         <button class="menu-item" id="hostelLookupBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg>Hostel Lookup</button>
         <button class="menu-item" id="activityLogBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Activity Log</button>
         <button class="menu-item" id="eodSummaryBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>End of Day Summary</button>
+        <button class="menu-item" id="customReportBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9l-6-6z"/><path d="M13 3v6h6"/><line x1="9" y1="14" x2="15" y2="14"/><line x1="9" y1="17" x2="13" y2="17"/></svg>Custom Report</button>
         <button class="menu-item" id="helpStatsBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10m6 10V4m6 16v-7"/></svg>Help Question Stats</button>
         <button class="menu-item" id="importStudentsBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg>Import New Students</button>
         <button class="menu-item" id="importVerificationBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Import Verification Updates</button>
@@ -1649,6 +1650,234 @@ function formatVerificationHistory(r){
   `;
 }
 
+const REPORT_FIELDS = [
+  { key: 'name', label: 'Name' },
+  { key: 'appNo', label: 'Application/Roll No' },
+  { key: 'regNo', label: 'Registration Number' },
+  { key: 'machineCode', label: 'Machine Code' },
+  { key: 'siteCode', label: 'Site Code' },
+  { key: 'studentType', label: 'Student Type' },
+  { key: 'status', label: 'Status' },
+  { key: 'verifiedBy', label: 'Verified By' },
+  { key: 'verifiedAt', label: 'Verified At' }
+];
+
+async function showCustomReportModal(){
+  const distinctSites = [...new Set(roster.map(r => r.siteCode).filter(Boolean))].sort();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:480px; overflow:hidden; display:flex; flex-direction:column; max-height:88vh;">
+      <h3 style="flex-shrink:0;">Custom Report</h3>
+      <div style="overflow-y:auto; flex:1; min-height:0;">
+
+        <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px;">Load a saved report</div>
+        <select id="crLoadTemplate" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:14px;">
+          <option value="">— Start a new report —</option>
+        </select>
+
+        <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px;">Fields to include</div>
+        <div id="crFieldsGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:6px 10px; margin-bottom:14px;">
+          ${REPORT_FIELDS.map(f => `
+            <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; cursor:pointer;">
+              <input type="checkbox" class="crField" value="${f.key}" checked> ${f.label}
+            </label>
+          `).join('')}
+        </div>
+
+        <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px;">Filters</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
+          <select id="crStatusFilter" style="padding:9px 10px; border-radius:8px; border:1px solid var(--color-border); font-size:12.5px;">
+            <option value="all">All statuses</option>
+            <option value="done">Verified only</option>
+            <option value="pending">Pending only</option>
+          </select>
+          <select id="crSiteFilter" style="padding:9px 10px; border-radius:8px; border:1px solid var(--color-border); font-size:12.5px;">
+            <option value="all">All sites</option>
+            ${distinctSites.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
+          <div>
+            <div style="font-size:11px; color:var(--color-text-muted); margin-bottom:3px;">Verified from</div>
+            <input type="date" id="crDateFrom" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--color-border); font-size:12.5px; box-sizing:border-box;">
+          </div>
+          <div>
+            <div style="font-size:11px; color:var(--color-text-muted); margin-bottom:3px;">Verified to</div>
+            <input type="date" id="crDateTo" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--color-border); font-size:12.5px; box-sizing:border-box;">
+          </div>
+        </div>
+
+        <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px;">Group & sort</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
+          <select id="crGroupBy" style="padding:9px 10px; border-radius:8px; border:1px solid var(--color-border); font-size:12.5px;">
+            <option value="none">No grouping</option>
+            <option value="siteCode">Group by Site</option>
+            <option value="status">Group by Status</option>
+          </select>
+          <select id="crSortBy" style="padding:9px 10px; border-radius:8px; border:1px solid var(--color-border); font-size:12.5px;">
+            <option value="name">Sort by Name</option>
+            <option value="siteCode">Sort by Site</option>
+            <option value="status">Sort by Status</option>
+            <option value="verifiedAt">Sort by Verified Date</option>
+          </select>
+        </div>
+
+        <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px;">Format</div>
+        <div style="display:flex; gap:14px; font-size:12.5px; margin-bottom:14px;">
+          <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="radio" name="crFormat" value="csv" checked> CSV</label>
+          <label style="display:flex; align-items:center; gap:5px; cursor:pointer;"><input type="radio" name="crFormat" value="pdf"> PDF</label>
+        </div>
+
+        <div style="border-top:1px solid var(--color-border); padding-top:12px; margin-bottom:8px;">
+          <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; cursor:pointer; margin-bottom:8px;">
+            <input type="checkbox" id="crSaveAsTemplate"> Save this as a reusable report
+          </label>
+          <input type="text" id="crTemplateName" placeholder="Report name (e.g. Weekly Site B Status)" style="display:none; width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; box-sizing:border-box;">
+        </div>
+        <div class="modal-error" id="crError"></div>
+      </div>
+      <button class="btn btn-primary btn-block" id="crGenerateBtn" style="flex-shrink:0; margin-top:10px;">Generate Report</button>
+      <button class="btn btn-ghost btn-block" id="crCloseBtn" style="margin-top:8px; flex-shrink:0;">Close</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  function close(){ overlay.remove(); }
+
+  const templateSelect = overlay.querySelector('#crLoadTemplate');
+  const saveCheckbox = overlay.querySelector('#crSaveAsTemplate');
+  const nameInput = overlay.querySelector('#crTemplateName');
+  const errorEl = overlay.querySelector('#crError');
+
+  saveCheckbox.addEventListener('change', () => {
+    nameInput.style.display = saveCheckbox.checked ? 'block' : 'none';
+  });
+
+  let savedTemplates = [];
+  runScript('getReportTemplates').then(data => {
+    if(data.ok && data.templates.length){
+      savedTemplates = data.templates;
+      savedTemplates.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.name;
+        templateSelect.appendChild(opt);
+      });
+    }
+  }).catch(() => {});
+
+  templateSelect.addEventListener('change', () => {
+    const template = savedTemplates.find(t => t.id === templateSelect.value);
+    if(!template) return;
+    const cfg = template.config;
+    overlay.querySelectorAll('.crField').forEach(cb => { cb.checked = (cfg.fields || []).includes(cb.value); });
+    overlay.querySelector('#crStatusFilter').value = cfg.status || 'all';
+    overlay.querySelector('#crSiteFilter').value = cfg.siteCode || 'all';
+    overlay.querySelector('#crDateFrom').value = cfg.dateFrom || '';
+    overlay.querySelector('#crDateTo').value = cfg.dateTo || '';
+    overlay.querySelector('#crGroupBy').value = cfg.groupBy || 'none';
+    overlay.querySelector('#crSortBy').value = cfg.sortBy || 'name';
+    const formatRadio = overlay.querySelector(`input[name="crFormat"][value="${cfg.format || 'csv'}"]`);
+    if(formatRadio) formatRadio.checked = true;
+  });
+
+  overlay.querySelector('#crGenerateBtn').addEventListener('click', async () => {
+    errorEl.textContent = '';
+    const fields = Array.from(overlay.querySelectorAll('.crField:checked')).map(cb => cb.value);
+    if(!fields.length){ errorEl.textContent = 'Select at least one field.'; return; }
+    const config = {
+      fields,
+      status: overlay.querySelector('#crStatusFilter').value,
+      siteCode: overlay.querySelector('#crSiteFilter').value,
+      dateFrom: overlay.querySelector('#crDateFrom').value,
+      dateTo: overlay.querySelector('#crDateTo').value,
+      groupBy: overlay.querySelector('#crGroupBy').value,
+      sortBy: overlay.querySelector('#crSortBy').value,
+      format: overlay.querySelector('input[name="crFormat"]:checked').value
+    };
+
+    if(saveCheckbox.checked){
+      const templateName = nameInput.value.trim();
+      if(!templateName){ errorEl.textContent = 'Enter a name to save this report.'; return; }
+      const actor = sessionStorage.getItem(USERNAME_KEY) || 'unknown';
+      const saveResult = await runScript('saveReportTemplate', templateName, config, actor);
+      if(!saveResult.ok){ errorEl.textContent = saveResult.error || 'Could not save this report.'; return; }
+    }
+
+    generateCustomReportOutput(config);
+    close();
+  });
+
+  overlay.querySelector('#crCloseBtn').addEventListener('click', close);
+}
+
+function generateCustomReportOutput(config){
+  let rows = roster.slice();
+  if(config.status !== 'all') rows = rows.filter(r => r.status === config.status);
+  if(config.siteCode !== 'all') rows = rows.filter(r => r.siteCode === config.siteCode);
+  if(config.dateFrom) rows = rows.filter(r => r.verifiedAt && r.verifiedAt.slice(0,10) >= config.dateFrom);
+  if(config.dateTo) rows = rows.filter(r => r.verifiedAt && r.verifiedAt.slice(0,10) <= config.dateTo);
+
+  const sortKey = config.sortBy;
+  rows.sort((a, b) => String(a[sortKey]||'').localeCompare(String(b[sortKey]||'')));
+
+  const fieldLabels = REPORT_FIELDS.filter(f => config.fields.includes(f.key));
+  const groups = config.groupBy === 'none' ? { '': rows } : rows.reduce((acc, r) => {
+    const key = r[config.groupBy] || '(none)';
+    if(!acc[key]) acc[key] = [];
+    acc[key].push(r);
+    return acc;
+  }, {});
+
+  if(config.format === 'csv'){
+    let csvLines = [fieldLabels.map(f => `"${f.label}"`).join(',')];
+    Object.keys(groups).sort().forEach(groupKey => {
+      if(config.groupBy !== 'none') csvLines.push(`"${groupKey}"`);
+      groups[groupKey].forEach(r => {
+        csvLines.push(fieldLabels.map(f => `"${String(r[f.key] ?? '').replace(/"/g,'""')}"`).join(','));
+      });
+    });
+    const blob = new Blob([csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'custom_report.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } else {
+    if(typeof window.jspdf === 'undefined'){
+      showToast('PDF library is still loading — try again in a moment.', 'error');
+      return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(14);
+    doc.text('Custom Report — Adamas University', 14, 16);
+    doc.setFontSize(9);
+    doc.text(`Generated ${new Date().toLocaleString('en-IN')}`, 14, 22);
+    let startY = 30;
+    Object.keys(groups).sort().forEach(groupKey => {
+      if(config.groupBy !== 'none'){
+        doc.setFontSize(11);
+        doc.text(groupKey, 14, startY);
+        startY += 6;
+      }
+      doc.autoTable({
+        startY,
+        head: [fieldLabels.map(f => f.label)],
+        body: groups[groupKey].map(r => fieldLabels.map(f => String(r[f.key] ?? ''))),
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [27, 42, 74] },
+        alternateRowStyles: { fillColor: [245, 246, 249] }
+      });
+      startY = doc.lastAutoTable.finalY + 10;
+    });
+    doc.save('custom_report.pdf');
+  }
+  showToast('Report generated.', 'success');
+}
+document.getElementById('customReportBtn')?.addEventListener('click', showCustomReportModal);
+
 function generateEodSummary(){
   const totalStudents = roster.length;
   const totalDone = roster.filter(r => r.status === 'done').length;
@@ -2646,6 +2875,8 @@ function enterApp(){
   if(activityLogBtn) activityLogBtn.style.display = perms.viewActivityLog ? 'block' : 'none';
   const eodSummaryBtn = document.getElementById('eodSummaryBtn');
   if(eodSummaryBtn) eodSummaryBtn.style.display = perms.viewSummary ? 'block' : 'none';
+  const customReportBtn = document.getElementById('customReportBtn');
+  if(customReportBtn) customReportBtn.style.display = perms.downloadCsv ? 'block' : 'none';
   const demoInfoBtn = document.getElementById('demoInfoBtn');
   if(demoInfoBtn) demoInfoBtn.style.display = (sessionStorage.getItem(DEMO_KEY) === 'yes') ? 'block' : 'none';
   const helpStatsBtn = document.getElementById('helpStatsBtn');
