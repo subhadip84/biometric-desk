@@ -1766,6 +1766,7 @@ function renderDetail(r){
   const isDone = r.status === 'done';
   const locked = !!r.locked;
   const isAdminUser = sessionStorage.getItem(ADMIN_KEY) === 'yes';
+  const isViewer = sessionStorage.getItem(VIEWER_KEY) === 'yes';
   let perms = {};
   try{ perms = JSON.parse(sessionStorage.getItem(PERMISSIONS_KEY) || '{}'); }catch(e){ perms = {}; }
   const canUnlock = !!perms.unlockRecords;
@@ -1791,6 +1792,7 @@ function renderDetail(r){
           <div class="detail-item"><div class="lab">Current status</div><div class="val">${isDone?'Verified':'Pending'}</div></div>
           ${formatVerificationHistory(r)}
         </div>
+        ${isViewer ? '' : `
         <div class="verify-controls">
           <div class="vc-label">Mark biometric status after verifying with the student</div>
           <div class="radio-row">
@@ -1809,6 +1811,7 @@ function renderDetail(r){
           ` : ''}
           <div class="saved-note" id="savedNote">Saved to Sheet.</div>
         </div>
+        `}
         ${canDelete ? `
           <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--color-border);">
             <button class="btn btn-ghost" id="deleteStudentBtn" style="color:var(--color-pending); border-color:var(--color-pending-soft);">Delete Student</button>
@@ -2561,6 +2564,7 @@ function escapeHtml(str){
 const SESSION_KEY = 'bioDeskLoggedIn';
 const ADMIN_KEY = 'bioDeskIsAdmin';
 const DEMO_KEY = 'bioDeskIsDemo';
+const VIEWER_KEY = 'bioDeskIsViewer';
 const HOSTELLER_ONLY_KEY = 'bioDeskIsHostellerOnly';
 const loginScreen = document.getElementById('loginScreen');
 const appShell = document.getElementById('appShell');
@@ -2776,6 +2780,7 @@ loginForm.addEventListener('submit', async (e) => {
     sessionStorage.setItem(SESSION_KEY, 'yes');
     sessionStorage.setItem(ADMIN_KEY, data.isAdmin ? 'yes' : 'no');
     sessionStorage.setItem(DEMO_KEY, data.isDemo ? 'yes' : 'no');
+    sessionStorage.setItem(VIEWER_KEY, data.isViewer ? 'yes' : 'no');
     sessionStorage.setItem(USERID_KEY, data.userId);
     sessionStorage.setItem(USERNAME_KEY, data.name || data.userId);
     sessionStorage.setItem(PERMISSIONS_KEY, JSON.stringify(data.permissions || {}));
@@ -3481,6 +3486,7 @@ function showAddUserModal(onSaved){
 
       <select id="auRole" style="width:100%; padding:11px 14px; border-radius:8px; border:1px solid var(--color-border); font-size:14px; font-family:var(--font-body); margin-top:14px;">
         <option value="staff">Staff</option>
+        <option value="viewer">Viewer (read-only)</option>
         <option value="admin">Admin</option>
         <option value="demo">Demo</option>
       </select>
@@ -3689,6 +3695,7 @@ function showEditUserModal(user, onSaved){
 
       <select id="euRole" style="width:100%; padding:11px 14px; border-radius:8px; border:1px solid var(--color-border); font-size:14px; font-family:var(--font-body); margin-top:14px;">
         <option value="staff">Staff</option>
+        <option value="viewer">Viewer (read-only)</option>
         <option value="admin">Admin</option>
         <option value="demo">Demo</option>
       </select>
