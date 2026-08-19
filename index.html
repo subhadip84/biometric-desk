@@ -2122,6 +2122,7 @@ function renderDetail(r){
         renderDetail(r);
         renderStats();
         renderTable();
+        updateTodayVerifiedCount();
         if(newStatus === 'done'){
           const freshSeal = detailArea.querySelector('.seal');
           if(freshSeal) freshSeal.classList.add('seal-pop');
