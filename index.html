@@ -1143,7 +1143,7 @@ function showTodayVerifiedModal(){
   function close(){ overlay.remove(); }
 
   downloadBtn.addEventListener('click', () => {
-    const headers = ['Name', 'Application/Roll No', 'Registration No', 'Machine Code', 'Site Code', 'Student Type', 'Verified By', 'Verified At'];
+    const headers = ['Sl. No.', 'Name', 'Application/Roll No', 'Registration No', 'Machine Code', 'Site Code', 'Student Type', 'Verified By', 'Verified At'];
     const csvEscape = (val) => {
       const str = String(val ?? '');
       return (str.indexOf(',') !== -1 || str.indexOf('"') !== -1 || str.indexOf('\n') !== -1)
@@ -1151,7 +1151,7 @@ function showTodayVerifiedModal(){
         : str;
     };
     const rows = [headers.map(csvEscape).join(',')].concat(
-      todayVerifiedList.map(r => [r.name, r.appNo, r.regNo, r.machineCode, r.siteCode, r.studentType, r.verifiedBy, r.verifiedAt].map(csvEscape).join(','))
+      todayVerifiedList.map((r, i) => [i+1, r.name, r.appNo, r.regNo, r.machineCode, r.siteCode, r.studentType, r.verifiedBy, r.verifiedAt].map(csvEscape).join(','))
     );
     const csvText = rows.join('\r\n');
     const now = new Date();
@@ -1831,11 +1831,13 @@ function generateCustomReportOutput(config){
   }, {});
 
   if(config.format === 'csv'){
-    let csvLines = [fieldLabels.map(f => `"${f.label}"`).join(',')];
+    let csvLines = [`"Sl. No.",` + fieldLabels.map(f => `"${f.label}"`).join(',')];
+    let serialCounter = 1;
     Object.keys(groups).sort().forEach(groupKey => {
       if(config.groupBy !== 'none') csvLines.push(`"${groupKey}"`);
       groups[groupKey].forEach(r => {
-        csvLines.push(fieldLabels.map(f => `"${String(r[f.key] ?? '').replace(/"/g,'""')}"`).join(','));
+        csvLines.push(`"${serialCounter}",` + fieldLabels.map(f => `"${String(r[f.key] ?? '').replace(/"/g,'""')}"`).join(','));
+        serialCounter++;
       });
     });
     const blob = new Blob([csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
@@ -1856,6 +1858,7 @@ function generateCustomReportOutput(config){
     doc.setFontSize(9);
     doc.text(`Generated ${new Date().toLocaleString('en-IN')}`, 14, 22);
     let startY = 30;
+    let serialCounter = 1;
     Object.keys(groups).sort().forEach(groupKey => {
       if(config.groupBy !== 'none'){
         doc.setFontSize(11);
@@ -1864,8 +1867,8 @@ function generateCustomReportOutput(config){
       }
       doc.autoTable({
         startY,
-        head: [fieldLabels.map(f => f.label)],
-        body: groups[groupKey].map(r => fieldLabels.map(f => String(r[f.key] ?? ''))),
+        head: [['Sl. No.', ...fieldLabels.map(f => f.label)]],
+        body: groups[groupKey].map(r => [serialCounter++, ...fieldLabels.map(f => String(r[f.key] ?? ''))]),
         styles: { fontSize: 8, cellPadding: 2 },
         headStyles: { fillColor: [27, 42, 74] },
         alternateRowStyles: { fillColor: [245, 246, 249] }
@@ -4466,8 +4469,8 @@ function showActivityLogModal(){
 
     doc.autoTable({
       startY: 32,
-      head: [['Time', 'Actor', 'Action', 'Details', 'IP']],
-      body: filtered.map(e => [e.timestamp, e.actor, e.action, e.details, e.ip]),
+      head: [['Sl. No.', 'Time', 'Actor', 'Action', 'Details', 'IP']],
+      body: filtered.map((e, i) => [i+1, e.timestamp, e.actor, e.action, e.details, e.ip]),
       styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [27, 42, 74] },
       alternateRowStyles: { fillColor: [245, 246, 249] }
