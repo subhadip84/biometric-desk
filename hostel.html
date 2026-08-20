@@ -1338,10 +1338,10 @@ function downloadHostelDetailRecords(hostelName, statusFilter){
   if(statusFilter === 'done') matches = matches.filter(s => s.status === 'done');
   if(statusFilter === 'pending') matches = matches.filter(s => s.status !== 'done');
 
-  const headers = ['Student Name', 'Application No', 'Registration No', 'Machine Code', 'Room No', 'Status'];
+  const headers = ['Sl. No.', 'Student Name', 'Application No', 'Registration No', 'Machine Code', 'Room No', 'Status'];
   const csvEscape = v => { const s = String(v ?? ''); return (s.includes(',')||s.includes('"')) ? '"' + s.replace(/"/g,'""') + '"' : s; };
   const lines = [headers.map(csvEscape).join(',')].concat(
-    matches.map(s => [s.studentName, s.applicationNo, s.registrationNo, s.machineCode, s.roomNo, s.status === 'done' ? 'Verified' : 'Pending'].map(csvEscape).join(','))
+    matches.map((s, i) => [i+1, s.studentName, s.applicationNo, s.registrationNo, s.machineCode, s.roomNo, s.status === 'done' ? 'Verified' : 'Pending'].map(csvEscape).join(','))
   );
   const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -1556,8 +1556,8 @@ function showActivityLogModal(){
     doc.text(`Range: ${fromStr || 'earliest'} to ${toStr || 'latest'}  ·  Generated: ${new Date().toLocaleString('en-IN')}`, 14, 27);
     doc.autoTable({
       startY: 32,
-      head: [['Time', 'Actor', 'Action', 'Details', 'IP']],
-      body: filtered.map(e => [e.timestamp, e.actor, e.action, e.details, e.ip]),
+      head: [['Sl. No.', 'Time', 'Actor', 'Action', 'Details', 'IP']],
+      body: filtered.map((e, i) => [i+1, e.timestamp, e.actor, e.action, e.details, e.ip]),
       styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [27, 42, 74] },
       alternateRowStyles: { fillColor: [245, 246, 249] }
@@ -1839,11 +1839,13 @@ function generateCustomReportOutput(config){
   }, {});
 
   if(config.format === 'csv'){
-    let csvLines = [fieldLabels.map(f => `"${f.label}"`).join(',')];
+    let csvLines = [`"Sl. No.",` + fieldLabels.map(f => `"${f.label}"`).join(',')];
+    let serialCounter = 1;
     Object.keys(groups).sort().forEach(groupKey => {
       if(config.groupBy !== 'none') csvLines.push(`"${groupKey}"`);
       groups[groupKey].forEach(s => {
-        csvLines.push(fieldLabels.map(f => `"${String(s[f.key] ?? '').replace(/"/g,'""')}"`).join(','));
+        csvLines.push(`"${serialCounter}",` + fieldLabels.map(f => `"${String(s[f.key] ?? '').replace(/"/g,'""')}"`).join(','));
+        serialCounter++;
       });
     });
     const blob = new Blob([csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
@@ -1864,6 +1866,7 @@ function generateCustomReportOutput(config){
     doc.setFontSize(9);
     doc.text(`Generated ${new Date().toLocaleString('en-IN')}`, 14, 22);
     let startY = 30;
+    let serialCounter = 1;
     Object.keys(groups).sort().forEach(groupKey => {
       if(config.groupBy !== 'none'){
         doc.setFontSize(11);
@@ -1872,8 +1875,8 @@ function generateCustomReportOutput(config){
       }
       doc.autoTable({
         startY,
-        head: [fieldLabels.map(f => f.label)],
-        body: groups[groupKey].map(s => fieldLabels.map(f => String(s[f.key] ?? ''))),
+        head: [['Sl. No.', ...fieldLabels.map(f => f.label)]],
+        body: groups[groupKey].map(s => [serialCounter++, ...fieldLabels.map(f => String(s[f.key] ?? ''))]),
         styles: { fontSize: 8, cellPadding: 2 },
         headStyles: { fillColor: [27, 42, 74] },
         alternateRowStyles: { fillColor: [245, 246, 249] }
