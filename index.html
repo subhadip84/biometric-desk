@@ -278,7 +278,15 @@
     box-shadow:0 20px 60px rgba(0,0,0,.25);
     max-height:88vh; overflow-y:auto;
     animation: modalScaleIn .2s cubic-bezier(.2,.9,.3,1.1);
+    position:relative;
   }
+  .modal-close-x{
+    position:absolute; top:14px; right:14px; width:28px; height:28px; border-radius:50%;
+    background:transparent; border:none; color:var(--color-text-muted); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; z-index:5; padding:0;
+    transition:background .15s, color .15s;
+  }
+  .modal-close-x:hover{ background:var(--color-bg); color:var(--color-text); }
   @keyframes modalScaleIn{ from{ opacity:0; transform:scale(.95) translateY(6px); } to{ opacity:1; transform:scale(1) translateY(0); } }
   @keyframes micPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.4; } }
   .modal-box h3{ font-family:var(--font-display); font-size:clamp(14.5px, 2.4vw, 16px); margin:0 0 14px; color:var(--color-heading); }
@@ -756,6 +764,44 @@ document.addEventListener('click', (e) => {
     else e.target.remove();
   }
 });
+
+// Automatically adds a close (X) button to the top-right corner of every
+// modal, the moment it's added to the page. Every modal in this app follows
+// the same pattern (build a .modal-overlay containing a .modal-box, then
+// document.body.appendChild it), so watching for that pattern here covers
+// every current and future modal from one place, rather than editing each
+// modal's own HTML individually.
+const modalCloseObserver = new MutationObserver((mutations) => {
+  mutations.forEach(mutation => {
+    mutation.addedNodes.forEach(node => {
+      if(node.nodeType !== 1) return;
+      const overlay = node.classList && node.classList.contains('modal-overlay') ? node : null;
+      if(!overlay) return;
+      const box = overlay.querySelector('.modal-box');
+      if(!box || box.querySelector('.modal-close-x')) return;
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'modal-close-x';
+      closeBtn.title = 'Close';
+      closeBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      closeBtn.addEventListener('click', () => {
+        // Prefer clicking an existing Cancel/Close/No button if the modal
+        // has one, so any promise resolution or cleanup logic already
+        // wired to it still runs - only remove the overlay directly for
+        // simpler modals with no such button.
+        const dismissBtn = Array.from(box.querySelectorAll('button')).find(btn => {
+          const id = (btn.id || '').toLowerCase();
+          const text = (btn.textContent || '').trim().toLowerCase();
+          return id.includes('cancel') || id.includes('close') || id === 'confirmnobtn' || text === 'cancel' || text === 'close' || text === 'no';
+        });
+        if(dismissBtn) dismissBtn.click();
+        else overlay.remove();
+      });
+      box.appendChild(closeBtn);
+    });
+  });
+});
+modalCloseObserver.observe(document.body, { childList: true });
 
 function showToast(message, type){
   const container = document.getElementById('toastContainer');
