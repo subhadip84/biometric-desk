@@ -2040,6 +2040,27 @@ function showQrCodeModal(r){
   overlay.querySelector('#qrCloseBtn').addEventListener('click', () => overlay.remove());
 }
 
+function resetDetailToEmptyState(){
+  const detailArea = document.getElementById('detailArea');
+  if(!detailArea) return;
+  detailArea.innerHTML = `
+    <div class="empty-state">
+      <svg width="72" height="72" viewBox="0 0 72 72" style="margin-bottom:4px;">
+        <circle cx="36" cy="36" r="34" fill="var(--color-gold-soft)"/>
+        <circle cx="32" cy="27" r="9" fill="none" stroke="var(--color-navy)" stroke-width="2.2"/>
+        <path d="M15 54c0-10 7.5-17 17-17s17 7 17 17" fill="none" stroke="var(--color-navy)" stroke-width="2.2" stroke-linecap="round"/>
+        <circle cx="52" cy="50" r="10" fill="#fff" stroke="var(--color-gold)" stroke-width="2.2"/>
+        <path d="M59 57l6 6" stroke="var(--color-gold)" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <div class="e-title">No student selected</div>
+      <div>Search for a student to view and verify their details.</div>
+    </div>
+  `;
+  searchInput.value = '';
+  currentSearchTerm = '';
+  suggestions.innerHTML = '';
+}
+
 function renderDetail(r){
   const isDone = r.status === 'done';
   const locked = !!r.locked;
@@ -2059,6 +2080,7 @@ function renderDetail(r){
         </div>
         <button type="button" id="qrDetailBtn" title="Show QR code for quick lookup" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center; margin-left:auto;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="17.5" x2="21" y2="17.5"/></svg></button>
         <button type="button" id="printDetailBtn" title="Print this record" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
+        <button type="button" id="closeDetailBtn" title="Close" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div class="vc-body">
         <div class="detail-grid">
@@ -2106,6 +2128,10 @@ function renderDetail(r){
   const qrDetailBtn = document.getElementById('qrDetailBtn');
   if(qrDetailBtn){
     qrDetailBtn.addEventListener('click', () => showQrCodeModal(r));
+  }
+  const closeDetailBtn = document.getElementById('closeDetailBtn');
+  if(closeDetailBtn){
+    closeDetailBtn.addEventListener('click', () => resetDetailToEmptyState());
   }
 
   if(canDelete){
