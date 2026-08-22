@@ -485,10 +485,14 @@
       </div>
 
       <div class="panel" id="todayStatsPanel" style="display:none;">
-        <div id="todayStatsGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; text-align:center;">
+        <div id="todayStatsGrid" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; text-align:center;">
           <div>
             <div style="font-size:11px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;">Verified Today</div>
             <div style="font-family:var(--font-display); font-size:32px; font-weight:700; color:var(--color-success);" id="todayVerifiedCount">0</div>
+          </div>
+          <div style="border-left:1px solid var(--color-border);">
+            <div style="font-size:11px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;">Verified Last Day</div>
+            <div style="font-family:var(--font-display); font-size:32px; font-weight:700; color:var(--color-info);" id="lastDayVerifiedCount">0</div>
           </div>
           <div id="todayImportStat" style="display:none; border-left:1px solid var(--color-border);">
             <div style="font-size:11px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;">Fresh Data</div>
@@ -1043,6 +1047,7 @@ document.addEventListener('keydown', (e) => {
 
 
 let todayVerifiedList = [];
+let lastDayVerifiedList = [];
 function renderPrioritySites(){
   const panel = document.getElementById('prioritySitesPanel');
   if(!panel || panel.style.display === 'none') return;
@@ -1142,6 +1147,29 @@ function updateTodayVerifiedCount(){
     el.style.textDecoration = 'none';
     el.onclick = null;
   }
+  updateLastDayVerifiedCount();
+}
+
+function updateLastDayVerifiedCount(){
+  const el = document.getElementById('lastDayVerifiedCount');
+  if(!el) return;
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const lastDayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+  lastDayVerifiedList = roster.filter(r => r.status === 'done' && r.verifiedAt && r.verifiedAt.indexOf(lastDayStr) === 0);
+  animateNumber(el, lastDayVerifiedList.length);
+
+  const isAdmin = sessionStorage.getItem(ADMIN_KEY) === 'yes';
+  if(isAdmin){
+    el.style.cursor = 'pointer';
+    el.style.textDecoration = 'underline dotted';
+    el.style.textUnderlineOffset = '5px';
+    el.onclick = showLastDayVerifiedModal;
+  } else {
+    el.style.cursor = 'default';
+    el.style.textDecoration = 'none';
+    el.onclick = null;
+  }
 }
 
 function showTodayVerifiedModal(){
@@ -1207,6 +1235,80 @@ function showTodayVerifiedModal(){
     const a = document.createElement('a');
     a.href = url;
     a.download = `Verified_Today_${dateStr}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    close();
+  });
+
+  closeBtn.addEventListener('click', close);
+}
+
+function showLastDayVerifiedModal(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:640px; overflow:hidden;">
+      <h3>Verified Last Day</h3>
+      <div style="font-size:12.5px; color:var(--color-text-muted); margin-bottom:10px;">${lastDayVerifiedList.length} student(s)</div>
+      <div style="max-height:360px; overflow:auto; border:1px solid var(--color-border); border-radius:8px;">
+        <table style="width:100%; border-collapse:collapse; font-size:12px;">
+          <thead>
+            <tr>
+              <th style="padding:7px 10px; background:var(--color-bg); text-align:left; position:sticky; top:0;">Name</th>
+              <th style="padding:7px 10px; background:var(--color-bg); text-align:left; position:sticky; top:0;">App/Roll No</th>
+              <th style="padding:7px 10px; background:var(--color-bg); text-align:left; position:sticky; top:0;">Site Code</th>
+              <th style="padding:7px 10px; background:var(--color-bg); text-align:left; position:sticky; top:0;">Verified By</th>
+              <th style="padding:7px 10px; background:var(--color-bg); text-align:left; position:sticky; top:0;">Verified At</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lastDayVerifiedList.length ? lastDayVerifiedList.map(r => `
+              <tr>
+                <td style="padding:7px 10px; border-top:1px solid var(--color-border);">${escapeHtml(r.name)||'—'}</td>
+                <td style="padding:7px 10px; border-top:1px solid var(--color-border); font-family:var(--font-mono);">${escapeHtml(r.appNo)||'—'}</td>
+                <td style="padding:7px 10px; border-top:1px solid var(--color-border); font-family:var(--font-mono);">${escapeHtml(r.siteCode)||'—'}</td>
+                <td style="padding:7px 10px; border-top:1px solid var(--color-border);">${escapeHtml(r.verifiedBy)||'—'}</td>
+                <td style="padding:7px 10px; border-top:1px solid var(--color-border); color:var(--color-text-muted);">${escapeHtml(r.verifiedAt)||'—'}</td>
+              </tr>
+            `).join('') : `<tr><td colspan="5" class="no-rows">No verifications recorded on the last day.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="ldvCloseBtn" style="flex:1;">Close</button>
+        <button class="btn btn-primary" id="ldvDownloadBtn" style="flex:1;">Download CSV</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const closeBtn = overlay.querySelector('#ldvCloseBtn');
+  const downloadBtn = overlay.querySelector('#ldvDownloadBtn');
+
+  function close(){ overlay.remove(); }
+
+  downloadBtn.addEventListener('click', () => {
+    const headers = ['Sl. No.', 'Name', 'Application/Roll No', 'Registration No', 'Machine Code', 'Site Code', 'Student Type', 'Verified By', 'Verified At'];
+    const csvEscape = (val) => {
+      const str = String(val ?? '');
+      return (str.indexOf(',') !== -1 || str.indexOf('"') !== -1 || str.indexOf('\n') !== -1)
+        ? '"' + str.replace(/"/g, '""') + '"'
+        : str;
+    };
+    const rows = [headers.map(csvEscape).join(',')].concat(
+      lastDayVerifiedList.map((r, i) => [i+1, r.name, r.appNo, r.regNo, r.machineCode, r.siteCode, r.studentType, r.verifiedBy, r.verifiedAt].map(csvEscape).join(','))
+    );
+    const csvText = rows.join('\r\n');
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const dateStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+    const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Verified_Last_Day_${dateStr}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
