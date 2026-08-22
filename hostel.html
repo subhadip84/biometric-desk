@@ -252,11 +252,16 @@
       </div>
 
       <div class="panel" id="statsRowPanel">
-        <div id="todayStatsGrid" style="display:grid; grid-template-columns:1fr; gap:12px; text-align:center;">
+        <div id="todayStatsGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; text-align:center;">
           <div>
             <div style="font-size:11px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;">Verified Today</div>
             <div style="font-family:var(--font-display); font-size:32px; font-weight:700; color:var(--color-success);" id="verifiedTodayCount">0</div>
             <div id="verifiedTodayHint" style="font-size:10.5px; color:var(--color-text-muted); margin-top:4px; display:none;">Click to download</div>
+          </div>
+          <div style="border-left:1px solid var(--color-border);">
+            <div style="font-size:11px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;">Verified Last Day</div>
+            <div style="font-family:var(--font-display); font-size:32px; font-weight:700; color:var(--color-info);" id="verifiedLastDayCount">0</div>
+            <div id="verifiedLastDayHint" style="font-size:10.5px; color:var(--color-text-muted); margin-top:4px; display:none;">Click to download</div>
           </div>
           <div id="freshDataColumn" style="display:none; border-left:1px solid var(--color-border);">
             <div style="font-size:11px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;">Fresh Data</div>
@@ -418,7 +423,7 @@ if(!perms.hostelAccess){
 document.getElementById('welcomeMsg').textContent = 'Welcome, ' + (sessionStorage.getItem(USERNAME_KEY) || 'User');
 const isAdminOrDemo = sessionStorage.getItem(ADMIN_KEY) === 'yes';
 if(isAdminOrDemo){
-  document.getElementById('todayStatsGrid').style.gridTemplateColumns = '1fr 1fr';
+  document.getElementById('todayStatsGrid').style.gridTemplateColumns = '1fr 1fr 1fr';
   document.getElementById('freshDataColumn').style.display = 'block';
   document.getElementById('hostelSummaryPanel').style.display = 'block';
   document.getElementById('hostelTrendChartPanel').style.display = 'block';
@@ -449,6 +454,16 @@ if(isAdminOrDemo){
     verifiedTodayCount.addEventListener('click', downloadVerifiedTodayCsv);
   }
   if(verifiedTodayHint) verifiedTodayHint.style.display = 'block';
+
+  const verifiedLastDayCount = document.getElementById('verifiedLastDayCount');
+  const verifiedLastDayHint = document.getElementById('verifiedLastDayHint');
+  if(verifiedLastDayCount){
+    verifiedLastDayCount.style.cursor = 'pointer';
+    verifiedLastDayCount.style.textDecoration = 'underline dotted';
+    verifiedLastDayCount.style.textUnderlineOffset = '5px';
+    verifiedLastDayCount.addEventListener('click', downloadVerifiedLastDayCsv);
+  }
+  if(verifiedLastDayHint) verifiedLastDayHint.style.display = 'block';
 }
 
 // --- Dark mode (shares the same preference as the main app) ---
@@ -1019,6 +1034,12 @@ function renderStats(){
   const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const verifiedToday = hostel.filter(s => s.status === 'done' && s.verifiedAt && s.verifiedAt.indexOf(todayStr) === 0).length;
   document.getElementById('verifiedTodayCount').textContent = verifiedToday;
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const lastDayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+  const verifiedLastDay = hostel.filter(s => s.status === 'done' && s.verifiedAt && s.verifiedAt.indexOf(lastDayStr) === 0).length;
+  document.getElementById('verifiedLastDayCount').textContent = verifiedLastDay;
 
   if(isAdminOrDemo){ renderHostelSummary(); renderHostelTrendChart(); renderHostelForecast(); renderHostelUnusualActivity(); renderHostelOnlineUsers(); renderHostelLeaderboard(); setupHostelDragReorder(); }
 }
@@ -2302,6 +2323,28 @@ async function downloadVerifiedTodayCsv(){
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = data.filename || 'hostel_verified_today.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    showToast(`Downloaded ${data.rowCount} row(s).`, 'success');
+  }catch(err){
+    showToast(err.message, 'error');
+  }finally{
+    countEl.style.opacity = '1';
+    countEl.textContent = originalText;
+  }
+}
+
+async function downloadVerifiedLastDayCsv(){
+  const countEl = document.getElementById('verifiedLastDayCount');
+  const originalText = countEl.textContent;
+  countEl.style.opacity = '.5';
+  try{
+    const data = await runScript('exportHostelVerifiedLastDayAsCsv');
+    if(!data.ok) throw new Error(data.error || 'Export failed.');
+    const blob = new Blob([data.csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = data.filename || 'hostel_verified_last_day.csv';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
     showToast(`Downloaded ${data.rowCount} row(s).`, 'success');
