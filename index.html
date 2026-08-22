@@ -485,21 +485,19 @@
       </div>
 
       <div class="panel" id="todayStatsPanel" style="display:none;">
-        <div id="todayStatsGrid" style="display:flex; flex-direction:column; gap:10px;">
-          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px;">
-            <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); white-space:nowrap;">Verified Today</div>
-            <div style="font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--color-success); white-space:nowrap;" id="todayVerifiedCount">0</div>
+        <div id="todayStatsGrid" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; text-align:center;">
+          <div style="min-width:0;">
+            <div style="font-size:10px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.2px; margin-bottom:6px; line-height:1.3;">Verified Today</div>
+            <div style="font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--color-success);" id="todayVerifiedCount">0</div>
           </div>
-          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px; border-top:1px solid var(--color-border); padding-top:10px;">
-            <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); white-space:nowrap;">Verified Last Day</div>
-            <div style="font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--color-info); white-space:nowrap;" id="lastDayVerifiedCount">0</div>
+          <div style="border-left:1px solid var(--color-border); padding-left:6px; min-width:0;">
+            <div style="font-size:10px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.2px; margin-bottom:6px; line-height:1.3;">Verified Last Day</div>
+            <div style="font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--color-info);" id="lastDayVerifiedCount">0</div>
           </div>
-          <div id="todayImportStat" style="display:none; align-items:baseline; justify-content:space-between; gap:10px; border-top:1px solid var(--color-border); padding-top:10px;">
-            <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); white-space:nowrap;">Fresh Data</div>
-            <div style="text-align:right;">
-              <div style="font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--color-navy); white-space:nowrap;" id="todayImportCount">0</div>
-              <div style="font-size:9px; color:var(--color-text-muted);" id="lastImportTimestamp"></div>
-            </div>
+          <div id="todayImportStat" style="display:none; border-left:1px solid var(--color-border); padding-left:6px; min-width:0;">
+            <div style="font-size:10px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.2px; margin-bottom:6px; line-height:1.3;">Fresh Data</div>
+            <div style="font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--color-navy);" id="todayImportCount">0</div>
+            <div style="font-size:8.5px; color:var(--color-text-muted); margin-top:3px;" id="lastImportTimestamp"></div>
           </div>
         </div>
       </div>
@@ -1109,7 +1107,7 @@ async function updateTodayImportCount(){
       return;
     }
     countEl.textContent = data.count;
-    statEl.style.display = 'flex';
+    statEl.style.display = 'block';
 
     const tsEl = document.getElementById('lastImportTimestamp');
     if(tsEl){
