@@ -485,19 +485,21 @@
       </div>
 
       <div class="panel" id="todayStatsPanel" style="display:none;">
-        <div id="todayStatsGrid" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; text-align:center;">
-          <div style="padding:0 6px; min-width:0;">
-            <div style="font-size:10px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.2px; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Verified Today</div>
-            <div style="font-family:var(--font-display); font-size:26px; font-weight:700; color:var(--color-success);" id="todayVerifiedCount">0</div>
+        <div id="todayStatsGrid" style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px;">
+            <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); white-space:nowrap;">Verified Today</div>
+            <div style="font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--color-success); white-space:nowrap;" id="todayVerifiedCount">0</div>
           </div>
-          <div style="border-left:1px solid var(--color-border); padding:0 6px; min-width:0;">
-            <div style="font-size:10px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.2px; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Verified Last Day</div>
-            <div style="font-family:var(--font-display); font-size:26px; font-weight:700; color:var(--color-info);" id="lastDayVerifiedCount">0</div>
+          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px; border-top:1px solid var(--color-border); padding-top:10px;">
+            <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); white-space:nowrap;">Verified Last Day</div>
+            <div style="font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--color-info); white-space:nowrap;" id="lastDayVerifiedCount">0</div>
           </div>
-          <div id="todayImportStat" style="display:none; border-left:1px solid var(--color-border); padding:0 6px; min-width:0;">
-            <div style="font-size:10px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.2px; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Fresh Data</div>
-            <div style="font-family:var(--font-display); font-size:26px; font-weight:700; color:var(--color-navy);" id="todayImportCount">0</div>
-            <div style="font-size:9px; color:var(--color-text-muted); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="lastImportTimestamp"></div>
+          <div id="todayImportStat" style="display:none; align-items:baseline; justify-content:space-between; gap:10px; border-top:1px solid var(--color-border); padding-top:10px;">
+            <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); white-space:nowrap;">Fresh Data</div>
+            <div style="text-align:right;">
+              <div style="font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--color-navy); white-space:nowrap;" id="todayImportCount">0</div>
+              <div style="font-size:9px; color:var(--color-text-muted);" id="lastImportTimestamp"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1092,18 +1094,11 @@ function renderPrioritySites(){
 async function updateTodayImportCount(){
   const statEl = document.getElementById('todayImportStat');
   const countEl = document.getElementById('todayImportCount');
-  const gridEl = document.getElementById('todayStatsGrid');
   if(!statEl || !countEl) return;
-
-  function setGridColumns(showSecondColumn){
-    if(gridEl) gridEl.style.gridTemplateColumns = showSecondColumn ? '1fr 1fr' : '1fr';
-    if(statEl) statEl.style.borderLeft = showSecondColumn ? '1px solid var(--color-border)' : 'none';
-  }
 
   const isAdmin = sessionStorage.getItem(ADMIN_KEY) === 'yes';
   if(!isAdmin){
     statEl.style.display = 'none';
-    setGridColumns(false);
     return;
   }
 
@@ -1111,12 +1106,10 @@ async function updateTodayImportCount(){
     const data = await runScript('getLastImportInfo');
     if(!data.ok){
       statEl.style.display = 'none';
-      setGridColumns(false);
       return;
     }
     countEl.textContent = data.count;
-    statEl.style.display = 'block';
-    setGridColumns(true);
+    statEl.style.display = 'flex';
 
     const tsEl = document.getElementById('lastImportTimestamp');
     if(tsEl){
@@ -1124,7 +1117,6 @@ async function updateTodayImportCount(){
     }
   }catch(err){
     statEl.style.display = 'none';
-    setGridColumns(false);
   }
 }
 
