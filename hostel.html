@@ -309,7 +309,7 @@
         <input type="text" id="tableQuickFilter" placeholder="🔍 Filter visible rows by name, App No, Reg No, or Hostel…" style="width:100%; padding:8px 14px; border-radius:20px; border:1px solid var(--color-border); font-size:12.5px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
         <div style="max-height:420px; overflow:auto; border:1px solid var(--color-border); border-radius:8px;">
           <table>
-            <thead><tr><th>Name</th><th>App No</th><th>Hostel</th><th>Room</th><th>Status</th></tr></thead>
+            <thead><tr><th style="width:32px;"><input type="checkbox" id="selectAllCheckbox" title="Select all visible"></th><th>Name</th><th>App No</th><th>Hostel</th><th>Room</th><th>Status</th></tr></thead>
             <tbody id="tableBody"></tbody>
           </table>
         </div>
@@ -384,6 +384,12 @@
     </div>
   </div>
 </main><div style="text-align:center; font-size:11px; color:var(--color-text-muted); margin-top:32px; padding-bottom:8px;">© Adamas University — AKC IT Support</div>
+<div id="bulkActionBar" style="display:none; position:fixed; bottom:0; left:0; right:0; background:var(--color-navy-deep); color:#fff; padding:12px 20px; box-shadow:0 -6px 20px rgba(0,0,0,.2); z-index:850; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap;">
+  <span id="bulkSelectedCount" style="font-size:13px; font-weight:600;">0 selected</span>
+  <button class="btn btn-primary" id="bulkMarkVerifiedBtn" style="background:var(--color-success); border-color:var(--color-success);">Mark Verified</button>
+  <button class="btn btn-primary" id="bulkMarkPendingBtn" style="background:var(--color-pending); border-color:var(--color-pending);">Mark Pending</button>
+  <button class="btn btn-ghost" id="bulkClearSelectionBtn" style="background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2);">Clear Selection</button>
+</div>
 <div id="helpChatToggle" style="position:fixed; bottom:24px; right:24px; width:52px; height:52px; border-radius:50%; background:var(--color-gold); color:var(--color-navy-deep); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; box-shadow:0 6px 18px rgba(0,0,0,.25); cursor:pointer; z-index:900;">?</div>
 
 <div id="helpChatPanel" style="display:none; position:fixed; bottom:88px; right:24px; width:310px; max-height:460px; background:#fff; border-radius:14px; box-shadow:0 14px 36px rgba(0,0,0,.22); overflow:visible; z-index:900; flex-direction:column;">
@@ -918,6 +924,7 @@ function initials(name){
 
 let hostel = [];
 let previousRosterStatus = {};
+let selectedStudentIds = new Set();
 let lastRefreshTime = null;
 let hasHandledLookupDeepLink = false;
 function handleLookupDeepLink(){
@@ -1448,6 +1455,55 @@ function getStatusSymbol(s){
 }
 
 let currentTableFilter = 'all';
+function updateBulkActionBar(){
+  const bar = document.getElementById('bulkActionBar');
+  const helpToggle = document.getElementById('helpChatToggle');
+  const countEl = document.getElementById('bulkSelectedCount');
+  const count = selectedStudentIds.size;
+  if(!bar) return;
+  if(count > 0){
+    bar.style.display = 'flex';
+    if(helpToggle) helpToggle.style.display = 'none';
+    if(countEl) countEl.textContent = `${count} selected`;
+  } else {
+    bar.style.display = 'none';
+    if(helpToggle) helpToggle.style.display = 'flex';
+  }
+}
+
+async function executeBulkStatusChange(status){
+  const ids = Array.from(selectedStudentIds);
+  if(!ids.length) return;
+  const markBtn = document.getElementById(status === 'done' ? 'bulkMarkVerifiedBtn' : 'bulkMarkPendingBtn');
+  const originalText = markBtn.textContent;
+  markBtn.disabled = true;
+  markBtn.textContent = 'Working…';
+  try{
+    const actorUserId = sessionStorage.getItem(USERID_KEY);
+    const data = await runScript('bulkUpdateHostelStatus', ids, status, actorUserId);
+    if(!data.ok){ showToast(data.error || 'Bulk update failed.', 'error'); return; }
+    let msg = `${data.updatedCount} student(s) updated.`;
+    if(data.skippedLocked) msg += ` ${data.skippedLocked} locked record(s) skipped.`;
+    showToast(msg, 'success');
+    selectedStudentIds.clear();
+    await loadHostelData();
+    updateBulkActionBar();
+  }catch(err){
+    showToast('Could not complete bulk update — ' + err.message, 'error');
+  }finally{
+    markBtn.disabled = false;
+    markBtn.textContent = originalText;
+  }
+}
+
+document.getElementById('bulkMarkVerifiedBtn')?.addEventListener('click', () => executeBulkStatusChange('done'));
+document.getElementById('bulkMarkPendingBtn')?.addEventListener('click', () => executeBulkStatusChange('pending'));
+document.getElementById('bulkClearSelectionBtn')?.addEventListener('click', () => {
+  selectedStudentIds.clear();
+  renderTable();
+  updateBulkActionBar();
+});
+
 function renderTable(){
   const tbody = document.getElementById('tableBody');
   let rows = hostel;
@@ -1460,20 +1516,38 @@ function renderTable(){
       s.registrationNo.toLowerCase().includes(q) || s.hostelName.toLowerCase().includes(q)
     );
   }
-  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--color-text-muted);">No matching records.</td></tr>'; return; }
+  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--color-text-muted);">No matching records.</td></tr>'; return; }
   tbody.innerHTML = rows.map(s => `
     <tr data-id="${s.id}" class="${previousRosterStatus[s.id] !== undefined && previousRosterStatus[s.id] !== s.status ? 'row-just-updated' : ''}">
+      <td onclick="event.stopPropagation();"><input type="checkbox" class="row-select-checkbox" data-id="${s.id}" ${selectedStudentIds.has(s.id) ? 'checked' : ''}></td>
       <td>${escapeHtml(s.studentName)||'—'}</td>
       <td class="mono" style="font-family:var(--font-mono);">${escapeHtml(s.applicationNo)||'—'}</td>
       <td>${escapeHtml(s.hostelName)||'—'}</td>
       <td>${escapeHtml(s.roomNo)||'—'}</td>
-      <td><span class="status-pill ${s.status}">${s.status==='done'?`<svg width="10" height="10" viewBox="0 0 24 24" style="vertical-align:-1px; margin-right:2px;"><path d="M4 12l6 6L20 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="${previousRosterStatus[s.id] !== undefined && previousRosterStatus[s.id] !== s.status ? 'check-draw-in' : ''}"/></svg>Verified`:'Pending'}</span>${getStatusSymbol(s)}${s.locked?' 🔒':''}</td>
+      <td><span class="status-pill ${s.status}">${s.status==='done'?`<svg width="10" height="10" viewBox="0 0 24 24" style="vertical-align:-1px; margin-right:2px;"><path d="M4 12l6 6L20 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="${previousRosterStatus[s.id] !== undefined && previousRosterStatus[s.id] !== s.status ? 'check-draw-in' : ''}"/></svg>Verified`:'Pending'}</span>${getStatusSymbol(s)}${s.locked?' 🔒':''}${s.notes ? ` <span title="${escapeHtml(s.notes)}">📝</span>` : ''}</td>
     </tr>
   `).join('');
   hostel.forEach(s => { previousRosterStatus[s.id] = s.status; });
   tbody.querySelectorAll('tr').forEach(tr => {
     tr.addEventListener('click', () => selectStudent(tr.dataset.id));
   });
+  tbody.querySelectorAll('.row-select-checkbox').forEach(cb => {
+    cb.addEventListener('click', e => e.stopPropagation());
+    cb.addEventListener('change', () => {
+      if(cb.checked) selectedStudentIds.add(cb.dataset.id);
+      else selectedStudentIds.delete(cb.dataset.id);
+      updateBulkActionBar();
+    });
+  });
+  const selectAllCb = document.getElementById('selectAllCheckbox');
+  if(selectAllCb){
+    selectAllCb.checked = rows.length > 0 && rows.every(s => selectedStudentIds.has(s.id));
+    selectAllCb.onchange = () => {
+      if(selectAllCb.checked) rows.forEach(s => selectedStudentIds.add(s.id));
+      else rows.forEach(s => selectedStudentIds.delete(s.id));
+      renderTable();
+    };
+  }
 }
 
 document.querySelectorAll('.chip').forEach(chip => {
@@ -2203,6 +2277,16 @@ function renderDetail(s){
           ` : ''}
         </div>
         `}
+        <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--color-border);">
+          <div style="font-size:12.5px; font-weight:600; color:var(--color-text-muted); margin-bottom:8px;">Notes</div>
+          <textarea id="studentNoteText" placeholder="Add a note for this student…" rows="3" ${isViewer ? 'readonly' : ''} style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); resize:vertical; box-sizing:border-box;">${escapeHtml(s.notes || '')}</textarea>
+          ${isViewer ? '' : `
+          <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+            <button class="btn btn-ghost" id="saveNoteBtn">Save Note</button>
+            <span id="noteSavedHint" style="font-size:11.5px; color:var(--color-success); display:none;">Saved</span>
+          </div>
+          `}
+        </div>
         ${(isAdminOrDemo && !isDemo) ? `
           <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--color-border);">
             <button class="btn btn-ghost" id="deleteHostelStudentBtn" style="color:var(--color-pending); border-color:var(--color-pending-soft);">Delete Student</button>
@@ -2222,6 +2306,31 @@ function renderDetail(s){
   const closeDetailBtn = detailArea.querySelector('#closeDetailBtn');
   if(closeDetailBtn){
     closeDetailBtn.addEventListener('click', () => resetDetailToEmptyState());
+  }
+  const saveNoteBtn = detailArea.querySelector('#saveNoteBtn');
+  if(saveNoteBtn){
+    saveNoteBtn.addEventListener('click', async () => {
+      const noteText = detailArea.querySelector('#studentNoteText').value;
+      const originalText = saveNoteBtn.textContent;
+      saveNoteBtn.disabled = true;
+      saveNoteBtn.textContent = 'Saving…';
+      try{
+        const actorUserId = sessionStorage.getItem(USERID_KEY);
+        const data = await runScript('updateHostelStudentNote', s.id, noteText, actorUserId);
+        if(!data.ok){ showToast(data.error || 'Could not save note.', 'error'); return; }
+        s.notes = noteText;
+        const hint = detailArea.querySelector('#noteSavedHint');
+        if(hint){
+          hint.style.display = 'inline';
+          setTimeout(() => { hint.style.display = 'none'; }, 2000);
+        }
+      }catch(err){
+        showToast('Could not save note — ' + err.message, 'error');
+      }finally{
+        saveNoteBtn.disabled = false;
+        saveNoteBtn.textContent = originalText;
+      }
+    });
   }
 
   if(isAdminOrDemo && !isDemo){
