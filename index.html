@@ -471,7 +471,7 @@
         <h2>Find a student</h2>
         <div class="search-box">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1D2430" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-          <input type="text" id="searchInput" placeholder="App No/Reg No/Machine Code/Name" autocomplete="off">
+          <input type="text" id="searchInput" placeholder="App No/Reg No/Machine Code/Name" autocomplete="off" title="Shortcuts: / to search, V to mark verified, P to mark pending, Esc to close">
           <button type="button" id="voiceCommandBtn" title="Voice command — e.g. &quot;mark APP-2026-1234 as verified&quot;" style="flex-shrink:0; width:26px; height:26px; background:transparent; border:none; color:var(--color-text-muted); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/></svg></button>
         </div>
         <button class="btn btn-primary btn-block" id="searchBtn">Search</button>
@@ -562,6 +562,7 @@
         <div class="table-scroll">
           <table>
             <thead><tr>
+              <th style="width:32px;"><input type="checkbox" id="selectAllCheckbox" title="Select all visible"></th>
               <th data-sort-key="name" class="sortable-th">Name</th>
               <th data-sort-key="appNo" class="sortable-th">Application/Roll No</th>
               <th data-sort-key="regNo" class="sortable-th">Registration No</th>
@@ -660,6 +661,12 @@
 </main>
 <div style="text-align:center; font-size:11px; color:var(--color-text-muted); margin-top:32px; padding-bottom:8px;">© Adamas University — AKC IT Support</div>
 
+<div id="bulkActionBar" style="display:none; position:fixed; bottom:0; left:0; right:0; background:var(--color-navy-deep); color:#fff; padding:12px 20px; box-shadow:0 -6px 20px rgba(0,0,0,.2); z-index:850; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap;">
+  <span id="bulkSelectedCount" style="font-size:13px; font-weight:600;">0 selected</span>
+  <button class="btn btn-primary" id="bulkMarkVerifiedBtn" style="background:var(--color-success); border-color:var(--color-success);">Mark Verified</button>
+  <button class="btn btn-primary" id="bulkMarkPendingBtn" style="background:var(--color-pending); border-color:var(--color-pending);">Mark Pending</button>
+  <button class="btn btn-ghost" id="bulkClearSelectionBtn" style="background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2);">Clear Selection</button>
+</div>
 <div id="helpChatToggle" style="position:fixed; bottom:24px; right:24px; width:52px; height:52px; border-radius:50%; background:var(--color-gold); color:var(--color-navy-deep); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; box-shadow:0 6px 18px rgba(0,0,0,.25); cursor:pointer; z-index:900;">?</div>
 
 <div id="helpChatPanel" style="display:none; position:fixed; bottom:88px; right:24px; width:310px; max-height:460px; background:#fff; border-radius:14px; box-shadow:0 14px 36px rgba(0,0,0,.22); overflow:visible; z-index:900; flex-direction:column;">
@@ -706,6 +713,8 @@ window.addEventListener('unhandledrejection', function(event){
 
 let roster = [];
 let previousRosterStatus = {};
+let selectedStudentIds = new Set();
+let currentlyDisplayedStudent = null;
 let lastRefreshTime = null;
 
 function updateLastRefreshedLabel(){
@@ -1598,6 +1607,62 @@ function runSearch(){
   else renderSuggList(matches);
 }
 document.getElementById('searchBtn').addEventListener('click', runSearch);
+
+// Keyboard shortcuts for the verification desk. Skipped entirely while the
+// person is typing in any input/textarea/select, except Escape (which
+// should always work) - this prevents e.g. typing "verified" in the search
+// box from accidentally triggering the "mark verified" shortcut on its "v".
+document.addEventListener('keydown', (e) => {
+  const target = e.target;
+  const isTyping = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
+
+  if(e.key === 'Escape'){
+    const openModal = document.querySelector('.modal-overlay');
+    if(openModal){
+      const dismissBtn = Array.from(openModal.querySelectorAll('button')).find(btn => {
+        const id = (btn.id || '').toLowerCase();
+        const text = (btn.textContent || '').trim().toLowerCase();
+        return id.includes('cancel') || id.includes('close') || id === 'confirmnobtn' || text === 'cancel' || text === 'close' || text === 'no';
+      });
+      if(dismissBtn) dismissBtn.click();
+      else openModal.remove();
+      return;
+    }
+    if(currentlyDisplayedStudent){
+      resetDetailToEmptyState();
+      return;
+    }
+    if(isTyping && target === searchInput){
+      searchInput.blur();
+    }
+    return;
+  }
+
+  if(isTyping) return;
+  if(document.querySelector('.modal-overlay')) return; // don't fire shortcuts while any modal is open
+
+  if(e.key === '/'){
+    e.preventDefault();
+    searchInput.focus();
+    return;
+  }
+
+  if((e.key === 'v' || e.key === 'V') && currentlyDisplayedStudent && !currentlyDisplayedStudent.locked){
+    const isViewer = sessionStorage.getItem(VIEWER_KEY) === 'yes';
+    if(isViewer) return;
+    const radio = document.querySelector('input[name="bio-status"][value="done"]');
+    if(radio && !radio.checked){ radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
+    return;
+  }
+
+  if((e.key === 'p' || e.key === 'P') && currentlyDisplayedStudent && !currentlyDisplayedStudent.locked){
+    const isViewer = sessionStorage.getItem(VIEWER_KEY) === 'yes';
+    if(isViewer) return;
+    const radio = document.querySelector('input[name="bio-status"][value="pending"]');
+    if(radio && !radio.checked){ radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
+    return;
+  }
+});
 searchInput.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); runSearch(); } });
 
 function selectStudent(id){
@@ -2151,6 +2216,7 @@ function showQrCodeModal(r){
 }
 
 function resetDetailToEmptyState(){
+  currentlyDisplayedStudent = null;
   const detailArea = document.getElementById('detailArea');
   if(!detailArea) return;
   detailArea.innerHTML = `
@@ -2172,6 +2238,7 @@ function resetDetailToEmptyState(){
 }
 
 function renderDetail(r){
+  currentlyDisplayedStudent = r;
   const isDone = r.status === 'done';
   const locked = !!r.locked;
   const isAdminUser = sessionStorage.getItem(ADMIN_KEY) === 'yes';
@@ -2222,6 +2289,16 @@ function renderDetail(r){
           <div class="saved-note" id="savedNote">Saved to Sheet.</div>
         </div>
         `}
+        <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--color-border);">
+          <div class="vc-label" style="margin-bottom:8px;">Notes</div>
+          <textarea id="studentNoteText" placeholder="Add a note for this student (e.g. awaiting document resubmission)…" rows="3" ${isViewer ? 'readonly' : ''} style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); resize:vertical; box-sizing:border-box;">${escapeHtml(r.notes || '')}</textarea>
+          ${isViewer ? '' : `
+          <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+            <button class="btn btn-ghost" id="saveNoteBtn">Save Note</button>
+            <span id="noteSavedHint" style="font-size:11.5px; color:var(--color-success); display:none;">Saved</span>
+          </div>
+          `}
+        </div>
         ${canDelete ? `
           <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--color-border);">
             <button class="btn btn-ghost" id="deleteStudentBtn" style="color:var(--color-pending); border-color:var(--color-pending-soft);">Delete Student</button>
@@ -2242,6 +2319,31 @@ function renderDetail(r){
   const closeDetailBtn = document.getElementById('closeDetailBtn');
   if(closeDetailBtn){
     closeDetailBtn.addEventListener('click', () => resetDetailToEmptyState());
+  }
+  const saveNoteBtn = document.getElementById('saveNoteBtn');
+  if(saveNoteBtn){
+    saveNoteBtn.addEventListener('click', async () => {
+      const noteText = document.getElementById('studentNoteText').value;
+      const originalText = saveNoteBtn.textContent;
+      saveNoteBtn.disabled = true;
+      saveNoteBtn.textContent = 'Saving…';
+      try{
+        const actorUserId = sessionStorage.getItem(USERID_KEY);
+        const data = await runScript('updateStudentNote', r.id, noteText, actorUserId);
+        if(!data.ok){ showToast(data.error || 'Could not save note.', 'error'); return; }
+        r.notes = noteText;
+        const hint = document.getElementById('noteSavedHint');
+        if(hint){
+          hint.style.display = 'inline';
+          setTimeout(() => { hint.style.display = 'none'; }, 2000);
+        }
+      }catch(err){
+        showToast('Could not save note — ' + err.message, 'error');
+      }finally{
+        saveNoteBtn.disabled = false;
+        saveNoteBtn.textContent = originalText;
+      }
+    });
   }
 
   if(canDelete){
@@ -2369,6 +2471,55 @@ function siteCodeTag(code){
   return `<span style="background:${bg}; color:${text}; font-size:11px; font-weight:600; padding:2px 9px; border-radius:12px; white-space:nowrap;">${escapeHtml(code)}</span>`;
 }
 
+function updateBulkActionBar(){
+  const bar = document.getElementById('bulkActionBar');
+  const helpToggle = document.getElementById('helpChatToggle');
+  const countEl = document.getElementById('bulkSelectedCount');
+  const count = selectedStudentIds.size;
+  if(!bar) return;
+  if(count > 0){
+    bar.style.display = 'flex';
+    if(helpToggle) helpToggle.style.display = 'none';
+    if(countEl) countEl.textContent = `${count} selected`;
+  } else {
+    bar.style.display = 'none';
+    if(helpToggle) helpToggle.style.display = 'flex';
+  }
+}
+
+async function executeBulkStatusChange(status){
+  const ids = Array.from(selectedStudentIds);
+  if(!ids.length) return;
+  const markBtn = document.getElementById(status === 'done' ? 'bulkMarkVerifiedBtn' : 'bulkMarkPendingBtn');
+  const originalText = markBtn.textContent;
+  markBtn.disabled = true;
+  markBtn.textContent = 'Working…';
+  try{
+    const actorUserId = sessionStorage.getItem(USERID_KEY);
+    const data = await runScript('bulkUpdateStatus', ids, status, actorUserId);
+    if(!data.ok){ showToast(data.error || 'Bulk update failed.', 'error'); return; }
+    let msg = `${data.updatedCount} student(s) updated.`;
+    if(data.skippedLocked) msg += ` ${data.skippedLocked} locked record(s) skipped.`;
+    showToast(msg, 'success');
+    selectedStudentIds.clear();
+    await fetchStudents();
+    updateBulkActionBar();
+  }catch(err){
+    showToast('Could not complete bulk update — ' + err.message, 'error');
+  }finally{
+    markBtn.disabled = false;
+    markBtn.textContent = originalText;
+  }
+}
+
+document.getElementById('bulkMarkVerifiedBtn')?.addEventListener('click', () => executeBulkStatusChange('done'));
+document.getElementById('bulkMarkPendingBtn')?.addEventListener('click', () => executeBulkStatusChange('pending'));
+document.getElementById('bulkClearSelectionBtn')?.addEventListener('click', () => {
+  selectedStudentIds.clear();
+  renderTable();
+  updateBulkActionBar();
+});
+
 function renderTable(){
   const tbody = document.getElementById('tableBody');
   let rows = roster;
@@ -2396,11 +2547,12 @@ function renderTable(){
   });
 
   if(!rows.length){
-    tbody.innerHTML = `<tr><td colspan="7" class="no-rows">No students in this view.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="no-rows">No students in this view.</td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(r => `
     <tr data-id="${r.id}" class="${previousRosterStatus[r.id] !== undefined && previousRosterStatus[r.id] !== r.status ? 'row-just-updated' : ''}" style="border-left:3px solid ${r.status==='done' ? 'var(--color-success)' : 'var(--color-pending)'};">
+      <td onclick="event.stopPropagation();"><input type="checkbox" class="row-select-checkbox" data-id="${r.id}" ${selectedStudentIds.has(r.id) ? 'checked' : ''}></td>
       <td>
         <div style="display:flex; align-items:center; gap:9px;">
           <div style="width:26px; height:26px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; background:${r.status==='done' ? 'var(--color-success-soft)' : 'var(--color-pending-soft)'}; color:${r.status==='done' ? 'var(--color-success)' : 'var(--color-pending)'};">${initials(r.name)}</div>
@@ -2412,13 +2564,30 @@ function renderTable(){
       <td class="mono">${escapeHtml(r.machineCode)||'—'}</td>
       <td>${siteCodeTag(r.siteCode)}</td>
       <td>${escapeHtml(r.studentType)||'—'}</td>
-      <td><span class="status-pill ${r.status==='done'?'done':'pending'}">${r.status==='done'?`<svg width="10" height="10" viewBox="0 0 24 24" style="vertical-align:-1px; margin-right:2px;"><path d="M4 12l6 6L20 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="${previousRosterStatus[r.id] !== undefined && previousRosterStatus[r.id] !== r.status ? 'check-draw-in' : ''}"/></svg>Verified`:'Pending'}</span>${(r.status==='done' && r.firstVerifiedBy && r.firstVerifiedBy !== r.verifiedBy) ? ' <span title="Overturned by admin">⚠️</span>' : ''}${r.locked ? ' 🔒' : ''}</td>
+      <td><span class="status-pill ${r.status==='done'?'done':'pending'}">${r.status==='done'?`<svg width="10" height="10" viewBox="0 0 24 24" style="vertical-align:-1px; margin-right:2px;"><path d="M4 12l6 6L20 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="${previousRosterStatus[r.id] !== undefined && previousRosterStatus[r.id] !== r.status ? 'check-draw-in' : ''}"/></svg>Verified`:'Pending'}</span>${(r.status==='done' && r.firstVerifiedBy && r.firstVerifiedBy !== r.verifiedBy) ? ' <span title="Overturned by admin">⚠️</span>' : ''}${r.locked ? ' 🔒' : ''}${r.notes ? ` <span title="${escapeHtml(r.notes)}">📝</span>` : ''}</td>
     </tr>
   `).join('');
   roster.forEach(r => { previousRosterStatus[r.id] = r.status; });
   tbody.querySelectorAll('tr').forEach(tr => {
     tr.addEventListener('click', () => selectStudent(tr.dataset.id));
   });
+  tbody.querySelectorAll('.row-select-checkbox').forEach(cb => {
+    cb.addEventListener('click', e => e.stopPropagation());
+    cb.addEventListener('change', () => {
+      if(cb.checked) selectedStudentIds.add(cb.dataset.id);
+      else selectedStudentIds.delete(cb.dataset.id);
+      updateBulkActionBar();
+    });
+  });
+  const selectAllCb = document.getElementById('selectAllCheckbox');
+  if(selectAllCb){
+    selectAllCb.checked = rows.length > 0 && rows.every(r => selectedStudentIds.has(r.id));
+    selectAllCb.onchange = () => {
+      if(selectAllCb.checked) rows.forEach(r => selectedStudentIds.add(r.id));
+      else rows.forEach(r => selectedStudentIds.delete(r.id));
+      renderTable();
+    };
+  }
 }
 
 function showSummaryDetailModal(siteFilter, statusFilter){
