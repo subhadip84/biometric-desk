@@ -240,7 +240,7 @@
         <h2>Find a hosteller</h2>
         <div class="search-box">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1D2430" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-          <input type="text" id="searchInput" placeholder="App No/Reg No/Machine Code/Name" autocomplete="off">
+          <input type="text" id="searchInput" placeholder="App No/Reg No/Machine Code/Name" autocomplete="off" title="Shortcuts: / to search, V to mark verified, P to mark pending, Esc to close">
           <button type="button" id="voiceCommandBtn" title="Voice command — e.g. &quot;mark APP-2026-1234 as verified&quot;" style="flex-shrink:0; width:26px; height:26px; background:transparent; border:none; color:var(--color-text-muted); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/></svg></button>
         </div>
         <button class="btn btn-primary btn-block" id="searchBtn">Search</button>
@@ -925,6 +925,7 @@ function initials(name){
 let hostel = [];
 let previousRosterStatus = {};
 let selectedStudentIds = new Set();
+let currentlyDisplayedStudent = null;
 let lastRefreshTime = null;
 let hasHandledLookupDeepLink = false;
 function handleLookupDeepLink(){
@@ -1603,6 +1604,61 @@ function runHostelSearch(){
   else renderSuggestions(matches);
 }
 document.getElementById('searchBtn').addEventListener('click', runHostelSearch);
+
+// Keyboard shortcuts for the hostel desk. Skipped entirely while the person
+// is typing in any input/textarea/select, except Escape (which should
+// always work).
+document.addEventListener('keydown', (e) => {
+  const target = e.target;
+  const isTyping = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
+
+  if(e.key === 'Escape'){
+    const openModal = document.querySelector('.modal-overlay');
+    if(openModal){
+      const dismissBtn = Array.from(openModal.querySelectorAll('button')).find(btn => {
+        const id = (btn.id || '').toLowerCase();
+        const text = (btn.textContent || '').trim().toLowerCase();
+        return id.includes('cancel') || id.includes('close') || id === 'confirmnobtn' || text === 'cancel' || text === 'close' || text === 'no';
+      });
+      if(dismissBtn) dismissBtn.click();
+      else openModal.remove();
+      return;
+    }
+    if(currentlyDisplayedStudent){
+      resetDetailToEmptyState();
+      return;
+    }
+    if(isTyping && target === searchInput){
+      searchInput.blur();
+    }
+    return;
+  }
+
+  if(isTyping) return;
+  if(document.querySelector('.modal-overlay')) return;
+
+  if(e.key === '/'){
+    e.preventDefault();
+    searchInput.focus();
+    return;
+  }
+
+  if((e.key === 'v' || e.key === 'V') && currentlyDisplayedStudent && !currentlyDisplayedStudent.locked){
+    const isViewer = sessionStorage.getItem(VIEWER_KEY) === 'yes';
+    if(isViewer) return;
+    const radio = document.querySelector('input[name="face-status"][value="done"]');
+    if(radio && !radio.checked){ radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
+    return;
+  }
+
+  if((e.key === 'p' || e.key === 'P') && currentlyDisplayedStudent && !currentlyDisplayedStudent.locked){
+    const isViewer = sessionStorage.getItem(VIEWER_KEY) === 'yes';
+    if(isViewer) return;
+    const radio = document.querySelector('input[name="face-status"][value="pending"]');
+    if(radio && !radio.checked){ radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
+    return;
+  }
+});
 searchInput.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); runHostelSearch(); } });
 
 function selectStudent(id){
@@ -2190,6 +2246,7 @@ function printHostelStudentDetail(s){
 }
 
 function resetDetailToEmptyState(){
+  currentlyDisplayedStudent = null;
   const detailArea = document.getElementById('detailArea');
   if(!detailArea) return;
   detailArea.innerHTML = `
@@ -2210,6 +2267,7 @@ function resetDetailToEmptyState(){
 }
 
 function renderDetail(s){
+  currentlyDisplayedStudent = s;
   const isDone = s.status === 'done';
   const locked = s.locked;
   const detailArea = document.getElementById('detailArea');
