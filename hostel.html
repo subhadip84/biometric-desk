@@ -107,7 +107,8 @@
   .stat .l{ font-size:clamp(8.5px, 1.5vw, 9.5px); color:var(--color-text-muted); text-transform:uppercase; }
   .stat.done .n{ color:var(--color-success); }
   .stat.pending .n{ color:var(--color-pending); }
-  .sugg-item{ border:1px solid var(--color-border); border-radius:7px; padding:8px 10px; cursor:pointer; margin-top:6px; display:flex; justify-content:space-between; align-items:center; }
+  .sugg-item{ border:1px solid var(--color-border); border-radius:7px; padding:8px 10px; cursor:pointer; margin-top:6px; display:flex; justify-content:space-between; align-items:center; animation:suggSlideDown .18s ease-out backwards; }
+  @keyframes suggSlideDown{ from{ opacity:0; transform:translateY(-6px); } to{ opacity:1; transform:translateY(0); } }
   .sugg-item:hover{ border-color:var(--color-navy); background:#F7F9FC; }
   .verify-card{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:12px; overflow:hidden; }
   .vc-head{ background:var(--color-navy); color:#fff; padding:clamp(14px, 2.8vw, 16px) clamp(15px, 3vw, 20px); display:flex; align-items:center; gap:clamp(12px, 2.4vw, 16px); }
@@ -1498,10 +1499,10 @@ function findMatches(q){
 }
 function renderSuggestions(matches){
   if(!matches.length){ suggestions.innerHTML = '<div style="font-size:12px; color:var(--color-text-muted); margin-top:8px; display:flex; align-items:center; gap:8px;"><span style="font-size:15px; opacity:.5;">🔍</span> No matches.</div>'; return; }
-  suggestions.innerHTML = matches.slice(0, 10).map(s => {
+  suggestions.innerHTML = matches.slice(0, 10).map((s, i) => {
     const idLine = [s.applicationNo, s.registrationNo, s.machineCode].filter(Boolean).join(' · ');
     return `
-    <div class="sugg-item" data-id="${s.id}">
+    <div class="sugg-item" data-id="${s.id}" style="animation-delay:${i * 0.02}s;">
       <div><div style="font-weight:600; font-size:13px;">${escapeHtml(s.studentName)||'(no name)'}</div><div style="font-family:var(--font-mono); font-size:11px; color:var(--color-text-muted);">${escapeHtml(idLine)||'—'}</div></div>
       <span class="status-pill ${s.status}">${s.status==='done'?'Verified':'Pending'}</span>${getStatusSymbol(s)}
     </div>
