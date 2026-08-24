@@ -2284,7 +2284,9 @@ function renderDetail(s){
   detailArea.innerHTML = `
     <div class="verify-card">
       <div class="vc-head">
-        <div class="seal ${isDone?'is-done':''}">${isDone ? '✓' : initials(s.studentName)}</div>
+        <div class="seal ${isDone?'is-done':''}" style="overflow:hidden; padding:0;">
+          ${s.photoUrl ? `<img src="${escapeHtml(s.photoUrl)}" alt="" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><span style="display:none; width:100%; height:100%; align-items:center; justify-content:center;">${isDone ? '✓' : initials(s.studentName)}</span>` : (isDone ? '✓' : initials(s.studentName))}
+        </div>
         <div class="vc-head-text">
           <div class="name">${escapeHtml(s.studentName)||'(no name)'}</div>
           <div class="status-line">${isDone ? 'Face capture complete' : 'Awaiting face capture'}${statusSymbol}${locked ? ' · Locked' : ''}</div>
