@@ -286,8 +286,16 @@
     display:flex; align-items:center; justify-content:center; z-index:5; padding:0;
     transition:background .15s, color .15s;
   }
+  .modal-close-x svg{ transition:transform .2s ease; }
   .modal-close-x:hover{ background:var(--color-bg); color:var(--color-text); }
+  .modal-close-x:hover svg{ transform:rotate(90deg); }
+  .icon-btn-close svg{ transition:transform .2s ease; }
+  .icon-btn-close:hover svg{ transform:rotate(90deg); }
   @keyframes modalScaleIn{ from{ opacity:0; transform:scale(.95) translateY(6px); } to{ opacity:1; transform:scale(1) translateY(0); } }
+  @keyframes staggerPanelIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
+  .stagger-panel-in{ animation:staggerPanelIn .45s ease-out backwards; }
+  @keyframes checkDrawIn{ from{ stroke-dashoffset:20; } to{ stroke-dashoffset:0; } }
+  .check-draw-in{ stroke-dasharray:20; stroke-dashoffset:20; animation:checkDrawIn .5s ease-out .1s forwards; }
   @keyframes micPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.4; } }
   .modal-box h3{ font-family:var(--font-display); font-size:clamp(14.5px, 2.4vw, 16px); margin:0 0 14px; color:var(--color-heading); }
   .modal-box input[type=password], .modal-box input[type=text], .modal-box input[type=email], .modal-box input[type=tel]{
@@ -2180,7 +2188,7 @@ function renderDetail(r){
         </div>
         <button type="button" id="qrDetailBtn" title="Show QR code for quick lookup" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center; margin-left:auto;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="17.5" x2="21" y2="17.5"/></svg></button>
         <button type="button" id="printDetailBtn" title="Print this record" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
-        <button type="button" id="closeDetailBtn" title="Close" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        <button type="button" id="closeDetailBtn" title="Close" class="icon-btn-close" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div class="vc-body">
         <div class="detail-grid">
@@ -2402,7 +2410,7 @@ function renderTable(){
       <td class="mono">${escapeHtml(r.machineCode)||'—'}</td>
       <td>${siteCodeTag(r.siteCode)}</td>
       <td>${escapeHtml(r.studentType)||'—'}</td>
-      <td><span class="status-pill ${r.status==='done'?'done':'pending'}">${r.status==='done'?'Verified':'Pending'}</span>${(r.status==='done' && r.firstVerifiedBy && r.firstVerifiedBy !== r.verifiedBy) ? ' <span title="Overturned by admin">⚠️</span>' : ''}${r.locked ? ' 🔒' : ''}</td>
+      <td><span class="status-pill ${r.status==='done'?'done':'pending'}">${r.status==='done'?`<svg width="10" height="10" viewBox="0 0 24 24" style="vertical-align:-1px; margin-right:2px;"><path d="M4 12l6 6L20 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="${previousRosterStatus[r.id] !== undefined && previousRosterStatus[r.id] !== r.status ? 'check-draw-in' : ''}"/></svg>Verified`:'Pending'}</span>${(r.status==='done' && r.firstVerifiedBy && r.firstVerifiedBy !== r.verifiedBy) ? ' <span title="Overturned by admin">⚠️</span>' : ''}${r.locked ? ' 🔒' : ''}</td>
     </tr>
   `).join('');
   roster.forEach(r => { previousRosterStatus[r.id] = r.status; });
@@ -3039,6 +3047,16 @@ function enterApp(){
   const duplicateCheckPanel = document.getElementById('duplicateCheckPanel');
   if(duplicateCheckPanel) duplicateCheckPanel.style.display = perms.viewSummary ? 'block' : 'none';
   if(perms.viewSummary) setupDragReorder();
+  if(perms.viewSummary){
+    REORDERABLE_PANEL_IDS.forEach((id, i) => {
+      const panel = document.getElementById(id);
+      if(!panel || panel.style.display === 'none') return;
+      panel.classList.remove('stagger-panel-in');
+      void panel.offsetWidth; // restart animation if already applied
+      panel.style.animationDelay = `${i * 0.06}s`;
+      panel.classList.add('stagger-panel-in');
+    });
+  }
   const resetUserPasswordBtn = document.getElementById('resetUserPasswordBtn');
   if(resetUserPasswordBtn) resetUserPasswordBtn.style.display = perms.resetPasswords ? 'block' : 'none';
   const manageUsersBtn = document.getElementById('manageUsersBtn');
