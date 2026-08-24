@@ -72,7 +72,8 @@
   .brand-text .sub{ font-size:clamp(9.5px, 1.6vw, 11px); color:#B9C2D6; text-transform:uppercase; letter-spacing:.4px; }
   .backLink{ color:#B9C2D6; text-decoration:none; font-size:12px; display:flex; align-items:center; gap:6px; }
   .backLink:hover{ color:#fff; }
-  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:clamp(9px, 1.6vw, 10px) clamp(14px, 2.6vw, 16px); border-radius:7px; border:1px solid transparent; font-weight:600; font-size:clamp(12.5px, 2vw, 13.5px); cursor:pointer; font-family:var(--font-body); }
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:clamp(9px, 1.6vw, 10px) clamp(14px, 2.6vw, 16px); border-radius:7px; border:1px solid transparent; font-weight:600; font-size:clamp(12.5px, 2vw, 13.5px); cursor:pointer; font-family:var(--font-body); transition:transform .05s ease, background .15s; }
+  .btn:active{ transform:scale(0.98); }
   .btn-block{ width:100%; margin-top:12px; }
   .btn-primary{ background:var(--color-navy); color:#fff; }
   .btn-primary:hover{ background:var(--color-navy-deep); }
@@ -140,6 +141,10 @@
     0%, 100%{ box-shadow:inset 0 0 0 0 rgba(99,153,34,0); }
     50%{ box-shadow:inset 0 0 0 999px rgba(99,153,34,.08); }
   }
+  @keyframes staggerPanelIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
+  .stagger-panel-in{ animation:staggerPanelIn .45s ease-out backwards; }
+  @keyframes checkDrawIn{ from{ stroke-dashoffset:20; } to{ stroke-dashoffset:0; } }
+  .check-draw-in{ stroke-dasharray:20; stroke-dashoffset:20; animation:checkDrawIn .5s ease-out .1s forwards; }
   tbody tr:hover{ background:#F7F9FC; }
   .status-pill{ font-size:10.5px; padding:2px 9px; border-radius:20px; font-weight:600; }
   .status-pill.done{ background:var(--color-success-soft); color:var(--color-success); }
@@ -154,7 +159,11 @@
     display:flex; align-items:center; justify-content:center; z-index:5; padding:0;
     transition:background .15s, color .15s;
   }
+  .modal-close-x svg{ transition:transform .2s ease; }
   .modal-close-x:hover{ background:var(--color-bg); color:var(--color-text); }
+  .modal-close-x:hover svg{ transform:rotate(90deg); }
+  .icon-btn-close svg{ transition:transform .2s ease; }
+  .icon-btn-close:hover svg{ transform:rotate(90deg); }
   .modal-box h3{ font-family:var(--font-display); font-size:clamp(14.5px, 2.4vw, 16px); margin:0 0 14px; }
   .modal-box input[type="password"], .modal-box input[type="text"], .modal-box input[type="email"], .modal-box input[type="tel"], .modal-box select{ width:100%; padding:10px 13px; border-radius:8px; border:1px solid var(--color-border); font-size:13.5px; margin-bottom:9px; font-family:var(--font-body); }
   .modal-actions{ display:flex; gap:8px; margin-top:6px; }
@@ -1041,7 +1050,18 @@ function renderStats(){
   const verifiedLastDay = hostel.filter(s => s.status === 'done' && s.verifiedAt && s.verifiedAt.indexOf(lastDayStr) === 0).length;
   document.getElementById('verifiedLastDayCount').textContent = verifiedLastDay;
 
-  if(isAdminOrDemo){ renderHostelSummary(); renderHostelTrendChart(); renderHostelForecast(); renderHostelUnusualActivity(); renderHostelOnlineUsers(); renderHostelLeaderboard(); setupHostelDragReorder(); }
+  if(isAdminOrDemo){
+    renderHostelSummary(); renderHostelTrendChart(); renderHostelForecast(); renderHostelUnusualActivity(); renderHostelOnlineUsers(); renderHostelLeaderboard(); setupHostelDragReorder();
+    if(!window.hasStaggeredHostelPanelsOnce){
+      window.hasStaggeredHostelPanelsOnce = true;
+      HOSTEL_REORDERABLE_PANEL_IDS.forEach((id, i) => {
+        const panel = document.getElementById(id);
+        if(!panel || panel.style.display === 'none') return;
+        panel.style.animationDelay = `${i * 0.06}s`;
+        panel.classList.add('stagger-panel-in');
+      });
+    }
+  }
 }
 
 let hostelSummaryChartInstance = null;
@@ -1446,7 +1466,7 @@ function renderTable(){
       <td class="mono" style="font-family:var(--font-mono);">${escapeHtml(s.applicationNo)||'—'}</td>
       <td>${escapeHtml(s.hostelName)||'—'}</td>
       <td>${escapeHtml(s.roomNo)||'—'}</td>
-      <td><span class="status-pill ${s.status}">${s.status==='done'?'Verified':'Pending'}</span>${getStatusSymbol(s)}${s.locked?' 🔒':''}</td>
+      <td><span class="status-pill ${s.status}">${s.status==='done'?`<svg width="10" height="10" viewBox="0 0 24 24" style="vertical-align:-1px; margin-right:2px;"><path d="M4 12l6 6L20 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="${previousRosterStatus[s.id] !== undefined && previousRosterStatus[s.id] !== s.status ? 'check-draw-in' : ''}"/></svg>Verified`:'Pending'}</span>${getStatusSymbol(s)}${s.locked?' 🔒':''}</td>
     </tr>
   `).join('');
   hostel.forEach(s => { previousRosterStatus[s.id] = s.status; });
@@ -2138,7 +2158,7 @@ function renderDetail(s){
         </div>
         <button type="button" id="qrDetailBtn" title="Show QR code for quick lookup" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center; margin-left:auto;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="17.5" x2="21" y2="17.5"/></svg></button>
         <button type="button" id="printDetailBtn" title="Print this record" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
-        <button type="button" id="closeDetailBtn" title="Close" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        <button type="button" id="closeDetailBtn" title="Close" class="icon-btn-close" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div class="vc-body">
         <div class="detail-grid">
