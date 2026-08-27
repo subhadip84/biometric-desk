@@ -450,6 +450,7 @@
         <button class="menu-item" id="activityLogBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Activity Log</button>
         <button class="menu-item" id="eodSummaryBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>End of Day Summary</button>
         <button class="menu-item" id="customReportBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9l-6-6z"/><path d="M13 3v6h6"/><line x1="9" y1="14" x2="15" y2="14"/><line x1="9" y1="17" x2="13" y2="17"/></svg>Custom Report</button>
+        <button class="menu-item" id="backupDbBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>Backup to Database</button>
         <button class="menu-item" id="helpStatsBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10m6 10V4m6 16v-7"/></svg>Help Question Stats</button>
         <button class="menu-item" id="importStudentsBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg>Import New Students</button>
         <button class="menu-item" id="importVerificationBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Import Verification Updates</button>
@@ -1883,6 +1884,28 @@ const REPORT_FIELDS = [
   { key: 'verifiedAt', label: 'Verified At' }
 ];
 
+async function handleBackupToDatabase(){
+  const confirmed = await showConfirmModal('This copies the current roster and hostel data into the backup database. Google Sheets remains the main data source — this only creates a snapshot copy. Continue?', 'Backup to Database');
+  if(!confirmed) return;
+  const btn = document.getElementById('backupDbBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Backing up…';
+  try{
+    const actorUserId = sessionStorage.getItem(USERID_KEY);
+    const actorName = sessionStorage.getItem(USERNAME_KEY) || actorUserId;
+    const data = await runScript('backupToNeonDatabase', actorName);
+    if(!data.ok){ showToast(data.error || 'Backup failed.', 'error'); return; }
+    showToast(`Backed up ${data.rosterCount} roster + ${data.hostelCount} hostel record(s).`, 'success');
+  }catch(err){
+    showToast('Could not complete backup — ' + err.message, 'error');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+document.getElementById('backupDbBtn')?.addEventListener('click', handleBackupToDatabase);
+
 async function showCustomReportModal(){
   const distinctSites = [...new Set(roster.map(r => r.siteCode).filter(Boolean))].sort();
 
@@ -3244,6 +3267,8 @@ function enterApp(){
   if(eodSummaryBtn) eodSummaryBtn.style.display = perms.viewSummary ? 'block' : 'none';
   const customReportBtn = document.getElementById('customReportBtn');
   if(customReportBtn) customReportBtn.style.display = perms.downloadCsv ? 'block' : 'none';
+  const backupDbBtn = document.getElementById('backupDbBtn');
+  if(backupDbBtn) backupDbBtn.style.display = (sessionStorage.getItem(ADMIN_KEY) === 'yes') ? 'block' : 'none';
   const demoInfoBtn = document.getElementById('demoInfoBtn');
   if(demoInfoBtn) demoInfoBtn.style.display = (sessionStorage.getItem(DEMO_KEY) === 'yes') ? 'block' : 'none';
   const helpStatsBtn = document.getElementById('helpStatsBtn');
