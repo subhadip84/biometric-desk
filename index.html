@@ -1884,27 +1884,131 @@ const REPORT_FIELDS = [
   { key: 'verifiedAt', label: 'Verified At' }
 ];
 
-async function handleBackupToDatabase(){
-  const confirmed = await showConfirmModal('This copies the current roster and hostel data into the backup database. Google Sheets remains the main data source — this only creates a snapshot copy. Continue?', 'Backup to Database');
-  if(!confirmed) return;
-  const btn = document.getElementById('backupDbBtn');
-  const originalText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = 'Backing up…';
-  try{
-    const actorUserId = sessionStorage.getItem(USERID_KEY);
-    const actorName = sessionStorage.getItem(USERNAME_KEY) || actorUserId;
-    const data = await runScript('backupToNeonDatabase', actorName);
-    if(!data.ok){ showToast(data.error || 'Backup failed.', 'error'); return; }
-    showToast(`Backed up ${data.rosterCount} roster + ${data.hostelCount} hostel record(s).`, 'success');
-  }catch(err){
-    showToast('Could not complete backup — ' + err.message, 'error');
-  }finally{
-    btn.disabled = false;
-    btn.textContent = originalText;
-  }
+function estimateBackupSeconds(totalRows){
+  // Rough heuristic: ~2s base overhead (connecting, creating tables) plus
+  // ~1.2s per 500-row batch actually written. This is an estimate, not a
+  // guarantee - actual time depends on network conditions to the database.
+  const batches = Math.ceil(totalRows / 500) || 1;
+  return Math.round(2 + batches * 1.2);
 }
-document.getElementById('backupDbBtn')?.addEventListener('click', handleBackupToDatabase);
+
+async function showBackupToDatabaseModal(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:440px; overflow:hidden; display:flex; flex-direction:column; max-height:88vh;">
+      <h3 style="flex-shrink:0;">Backup to Database</h3>
+      <div id="backupSelectView" style="overflow-y:auto; flex:1; min-height:0;">
+        <div style="font-size:12.5px; color:var(--color-text-muted); margin-bottom:12px;">Choose which sheets to copy into the backup database. Google Sheets remains the main data source — this only creates a snapshot copy.</div>
+        <div id="backupSheetList" style="display:flex; flex-direction:column; gap:8px;">
+          <div class="skeleton-line" style="width:80%;"></div><div class="skeleton-line" style="width:60%;"></div>
+        </div>
+        <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--color-border); font-size:12px; color:var(--color-text-muted);" id="backupTimelineEstimate"></div>
+      </div>
+      <div id="backupProgressView" style="display:none; flex-direction:column; align-items:center; gap:16px; padding:20px 0;">
+        <div style="position:relative; width:100%; height:60px; background:var(--color-bg); border-radius:12px; overflow:hidden; display:flex; align-items:center; padding:0 16px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          <div id="backupFlyingChip" style="position:absolute; left:45px; background:var(--color-gold-soft); color:var(--color-navy); font-size:11px; padding:4px 8px; border-radius:6px; transition:left 1.2s linear;">reading rows…</div>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-navy)" stroke-width="2" style="position:absolute; right:16px;"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        </div>
+        <div id="backupProgressText" style="font-size:13px; color:var(--color-text-muted);">Starting backup…</div>
+      </div>
+      <div id="backupDoneView" style="display:none;"></div>
+      <div class="modal-error" id="backupError" style="flex-shrink:0;"></div>
+      <button class="btn btn-primary btn-block" id="backupStartBtn" style="flex-shrink:0; margin-top:10px;">Start Backup</button>
+      <button class="btn btn-ghost btn-block" id="backupCloseBtn" style="margin-top:8px; flex-shrink:0;">Close</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const listEl = overlay.querySelector('#backupSheetList');
+  const timelineEl = overlay.querySelector('#backupTimelineEstimate');
+  const startBtn = overlay.querySelector('#backupStartBtn');
+  const closeBtn = overlay.querySelector('#backupCloseBtn');
+  const errorEl = overlay.querySelector('#backupError');
+
+  function updateTimelineEstimate(){
+    const checked = Array.from(listEl.querySelectorAll('.backup-sheet-checkbox:checked'));
+    const totalRows = checked.reduce((sum, cb) => sum + Number(cb.dataset.rowcount || 0), 0);
+    if(!checked.length){ timelineEl.textContent = 'Select at least one sheet.'; return; }
+    const seconds = estimateBackupSeconds(totalRows);
+    timelineEl.textContent = `${checked.length} sheet(s) selected, ${totalRows.toLocaleString()} row(s) — expected time: ~${seconds}s`;
+  }
+
+  try{
+    const data = await runScript('getAvailableSheetsForBackup');
+    if(!data.ok || !data.sheets.length){
+      listEl.innerHTML = `<div class="search-hint">${escapeHtml(data.error || 'No sheets found.')}</div>`;
+      return;
+    }
+    listEl.innerHTML = data.sheets.map((s, i) => `
+      <label style="display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:13px; border:1px solid var(--color-border); border-radius:8px; padding:8px 10px; cursor:pointer;">
+        <span style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" class="backup-sheet-checkbox" data-sheetname="${escapeHtml(s.title)}" data-rowcount="${s.rowCount}" ${i < 2 ? 'checked' : ''}>
+          ${escapeHtml(s.title)}
+        </span>
+        <span style="color:var(--color-text-muted); font-size:11.5px;">${s.rowCount.toLocaleString()} row(s)</span>
+      </label>
+    `).join('');
+    listEl.querySelectorAll('.backup-sheet-checkbox').forEach(cb => cb.addEventListener('change', updateTimelineEstimate));
+    updateTimelineEstimate();
+  }catch(err){
+    listEl.innerHTML = `<div class="search-hint">Could not load sheet list — ${escapeHtml(err.message)}</div>`;
+  }
+
+  startBtn.addEventListener('click', async () => {
+    errorEl.textContent = '';
+    const checked = Array.from(listEl.querySelectorAll('.backup-sheet-checkbox:checked'));
+    if(!checked.length){ errorEl.textContent = 'Select at least one sheet to back up.'; return; }
+    const sheetNames = checked.map(cb => cb.dataset.sheetname);
+    const totalRows = checked.reduce((sum, cb) => sum + Number(cb.dataset.rowcount || 0), 0);
+
+    overlay.querySelector('#backupSelectView').style.display = 'none';
+    overlay.querySelector('#backupProgressView').style.display = 'flex';
+    startBtn.style.display = 'none';
+    closeBtn.disabled = true;
+
+    const chip = overlay.querySelector('#backupFlyingChip');
+    const progressText = overlay.querySelector('#backupProgressText');
+    let flyState = false;
+    const flyInterval = setInterval(() => {
+      flyState = !flyState;
+      chip.style.left = flyState ? 'calc(100% - 70px)' : '45px';
+      chip.textContent = flyState ? 'writing…' : 'reading…';
+    }, 1200);
+    progressText.textContent = `Backing up ${totalRows.toLocaleString()} row(s) across ${sheetNames.length} sheet(s)…`;
+
+    try{
+      const actorUserId = sessionStorage.getItem(USERID_KEY);
+      const actorName = sessionStorage.getItem(USERNAME_KEY) || actorUserId;
+      const data = await runScript('backupToNeonDatabase', sheetNames, actorName);
+      clearInterval(flyInterval);
+      overlay.querySelector('#backupProgressView').style.display = 'none';
+      const doneView = overlay.querySelector('#backupDoneView');
+      doneView.style.display = 'block';
+      if(!data.ok){
+        doneView.innerHTML = `<div class="search-hint">${escapeHtml(data.error || 'Backup failed.')}</div>`;
+      } else {
+        doneView.innerHTML = `
+          <div style="font-size:13px; color:var(--color-success); font-weight:600; margin-bottom:8px;">Backup complete</div>
+          ${data.results.map(r => `<div style="display:flex; justify-content:space-between; font-size:12.5px; padding:4px 0;"><span>${escapeHtml(r.sheetName)}</span><span style="color:var(--color-text-muted);">${r.rowCount.toLocaleString()} row(s)</span></div>`).join('')}
+        `;
+      }
+    }catch(err){
+      clearInterval(flyInterval);
+      overlay.querySelector('#backupProgressView').style.display = 'none';
+      const doneView = overlay.querySelector('#backupDoneView');
+      doneView.style.display = 'block';
+      doneView.innerHTML = `<div class="search-hint">Could not complete backup — ${escapeHtml(err.message)}</div>`;
+    }finally{
+      closeBtn.disabled = false;
+      closeBtn.textContent = 'Close';
+    }
+  });
+
+  closeBtn.addEventListener('click', () => overlay.remove());
+}
+document.getElementById('backupDbBtn')?.addEventListener('click', showBackupToDatabaseModal);
 
 async function showCustomReportModal(){
   const distinctSites = [...new Set(roster.map(r => r.siteCode).filter(Boolean))].sort();
