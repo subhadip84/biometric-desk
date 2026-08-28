@@ -1986,6 +1986,7 @@ const HOSTEL_REPORT_FIELDS = [
 
 async function showCustomReportModal(){
   const distinctHostels = [...new Set(hostel.map(s => s.hostelName).filter(Boolean))].sort();
+  const distinctAcademicYears = [...new Set(hostel.map(s => s.academicYear).filter(Boolean))].sort().reverse();
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -2009,7 +2010,7 @@ async function showCustomReportModal(){
         </div>
 
         <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px;">Filters</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
           <select id="crStatusFilter" style="padding:9px 10px; border-radius:8px; border:1px solid var(--color-border); font-size:12.5px;">
             <option value="all">All statuses</option>
             <option value="done">Verified only</option>
@@ -2020,6 +2021,10 @@ async function showCustomReportModal(){
             ${distinctHostels.map(h => `<option value="${escapeHtml(h)}">${escapeHtml(h)}</option>`).join('')}
           </select>
         </div>
+        <select id="crAcademicYearFilter" style="width:100%; padding:9px 10px; border-radius:8px; border:1px solid var(--color-border); font-size:12.5px; margin-bottom:14px;">
+          <option value="all">All Years</option>
+          ${distinctAcademicYears.map(y => `<option value="${escapeHtml(y)}">${escapeHtml(y)}</option>`).join('')}
+        </select>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
           <div>
             <div style="font-size:11px; color:var(--color-text-muted); margin-bottom:3px;">Verified from</div>
@@ -2096,6 +2101,7 @@ async function showCustomReportModal(){
     overlay.querySelectorAll('.crField').forEach(cb => { cb.checked = (cfg.fields || []).includes(cb.value); });
     overlay.querySelector('#crStatusFilter').value = cfg.status || 'all';
     overlay.querySelector('#crSiteFilter').value = cfg.siteCode || 'all';
+    overlay.querySelector('#crAcademicYearFilter').value = cfg.academicYear || 'all';
     overlay.querySelector('#crDateFrom').value = cfg.dateFrom || '';
     overlay.querySelector('#crDateTo').value = cfg.dateTo || '';
     overlay.querySelector('#crGroupBy').value = cfg.groupBy || 'none';
@@ -2112,6 +2118,7 @@ async function showCustomReportModal(){
       fields,
       status: overlay.querySelector('#crStatusFilter').value,
       siteCode: overlay.querySelector('#crSiteFilter').value,
+      academicYear: overlay.querySelector('#crAcademicYearFilter').value,
       dateFrom: overlay.querySelector('#crDateFrom').value,
       dateTo: overlay.querySelector('#crDateTo').value,
       groupBy: overlay.querySelector('#crGroupBy').value,
@@ -2135,9 +2142,10 @@ async function showCustomReportModal(){
 }
 
 function generateCustomReportOutput(config){
-  let rows = getFilteredHostel().slice();
+  let rows = hostel.slice();
   if(config.status !== 'all') rows = rows.filter(s => s.status === config.status);
   if(config.siteCode !== 'all') rows = rows.filter(s => s.hostelName === config.siteCode);
+  if(config.academicYear && config.academicYear !== 'all') rows = rows.filter(s => s.academicYear === config.academicYear);
   if(config.dateFrom) rows = rows.filter(s => s.verifiedAt && s.verifiedAt.slice(0,10) >= config.dateFrom);
   if(config.dateTo) rows = rows.filter(s => s.verifiedAt && s.verifiedAt.slice(0,10) <= config.dateTo);
 
@@ -2508,6 +2516,10 @@ function showHostelCsvFilterModal(){
         <option value="done">Verified only</option>
         <option value="pending">Non-verified only</option>
       </select>
+      <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px;">Academic Year</div>
+      <select id="hCsvAcademicYear" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13.5px; font-family:var(--font-body);">
+        <option value="all">All Years</option>
+      </select>
       <div class="modal-error" id="hCsvErr"></div>
       <div class="modal-actions">
         <button class="btn btn-ghost" id="hCsvCancel">Cancel</button>
@@ -2517,15 +2529,22 @@ function showHostelCsvFilterModal(){
   document.body.appendChild(overlay);
 
   const statusSelect = overlay.querySelector('#hCsvStatus');
+  const academicYearSelect = overlay.querySelector('#hCsvAcademicYear');
   const errEl = overlay.querySelector('#hCsvErr');
   const downloadBtn = overlay.querySelector('#hCsvDownload');
   function close(){ overlay.remove(); }
+
+  const availableYears = [...new Set(hostel.map(s => s.academicYear).filter(Boolean))].sort().reverse();
+  if(availableYears.length){
+    academicYearSelect.innerHTML = '<option value="all">All Years</option>' +
+      availableYears.map(y => `<option value="${escapeHtml(y)}">${escapeHtml(y)}</option>`).join('');
+  }
 
   downloadBtn.addEventListener('click', async () => {
     errEl.textContent = '';
     downloadBtn.disabled = true; downloadBtn.textContent = 'Preparing…';
     try{
-      const data = await runScript('exportHostelAsCsv', statusSelect.value, selectedAcademicYear);
+      const data = await runScript('exportHostelAsCsv', statusSelect.value, academicYearSelect.value);
       if(!data.ok) throw new Error(data.error || 'Export failed.');
       const blob = new Blob([data.csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
