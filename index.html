@@ -2068,6 +2068,7 @@ document.getElementById('backupDbBtn')?.addEventListener('click', showBackupToDa
 
 async function showCustomReportModal(){
   const distinctSites = [...new Set(roster.map(r => r.siteCode).filter(Boolean))].sort();
+  const distinctAcademicYears = [...new Set(roster.map(r => r.academicYear).filter(Boolean))].sort().reverse();
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -2091,7 +2092,7 @@ async function showCustomReportModal(){
         </div>
 
         <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px;">Filters</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
           <select id="crStatusFilter" style="padding:9px 10px; border-radius:8px; border:1px solid var(--color-border); font-size:12.5px;">
             <option value="all">All statuses</option>
             <option value="done">Verified only</option>
@@ -2102,6 +2103,10 @@ async function showCustomReportModal(){
             ${distinctSites.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
           </select>
         </div>
+        <select id="crAcademicYearFilter" style="width:100%; padding:9px 10px; border-radius:8px; border:1px solid var(--color-border); font-size:12.5px; margin-bottom:14px;">
+          <option value="all">All Years</option>
+          ${distinctAcademicYears.map(y => `<option value="${escapeHtml(y)}">${escapeHtml(y)}</option>`).join('')}
+        </select>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
           <div>
             <div style="font-size:11px; color:var(--color-text-muted); margin-bottom:3px;">Verified from</div>
@@ -2178,6 +2183,7 @@ async function showCustomReportModal(){
     overlay.querySelectorAll('.crField').forEach(cb => { cb.checked = (cfg.fields || []).includes(cb.value); });
     overlay.querySelector('#crStatusFilter').value = cfg.status || 'all';
     overlay.querySelector('#crSiteFilter').value = cfg.siteCode || 'all';
+    overlay.querySelector('#crAcademicYearFilter').value = cfg.academicYear || 'all';
     overlay.querySelector('#crDateFrom').value = cfg.dateFrom || '';
     overlay.querySelector('#crDateTo').value = cfg.dateTo || '';
     overlay.querySelector('#crGroupBy').value = cfg.groupBy || 'none';
@@ -2194,6 +2200,7 @@ async function showCustomReportModal(){
       fields,
       status: overlay.querySelector('#crStatusFilter').value,
       siteCode: overlay.querySelector('#crSiteFilter').value,
+      academicYear: overlay.querySelector('#crAcademicYearFilter').value,
       dateFrom: overlay.querySelector('#crDateFrom').value,
       dateTo: overlay.querySelector('#crDateTo').value,
       groupBy: overlay.querySelector('#crGroupBy').value,
@@ -2217,9 +2224,10 @@ async function showCustomReportModal(){
 }
 
 function generateCustomReportOutput(config){
-  let rows = getFilteredRoster().slice();
+  let rows = roster.slice();
   if(config.status !== 'all') rows = rows.filter(r => r.status === config.status);
   if(config.siteCode !== 'all') rows = rows.filter(r => r.siteCode === config.siteCode);
+  if(config.academicYear && config.academicYear !== 'all') rows = rows.filter(r => r.academicYear === config.academicYear);
   if(config.dateFrom) rows = rows.filter(r => r.verifiedAt && r.verifiedAt.slice(0,10) >= config.dateFrom);
   if(config.dateTo) rows = rows.filter(r => r.verifiedAt && r.verifiedAt.slice(0,10) <= config.dateTo);
 
@@ -3778,12 +3786,12 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 });
 
 // --- Admin: download the roster as CSV, with optional Status/Site filters ---
-async function performCsvDownload(statusFilter, siteFilter, triggerBtn){
+async function performCsvDownload(statusFilter, siteFilter, triggerBtn, academicYearFilter){
   const originalText = triggerBtn.textContent;
   triggerBtn.disabled = true;
   triggerBtn.textContent = 'Preparing…';
   try{
-    const data = await runScript('exportRosterAsCsv', statusFilter, siteFilter, selectedAcademicYear);
+    const data = await runScript('exportRosterAsCsv', statusFilter, siteFilter, academicYearFilter !== undefined ? academicYearFilter : selectedAcademicYear);
     if(!data.ok) throw new Error(data.error || 'Could not export the roster.');
     const blob = new Blob([data.csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -3814,8 +3822,12 @@ function showCsvFilterModal(){
         <option value="pending">Pending only</option>
       </select>
       <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px;">Site Code</div>
-      <select id="csvSiteFilter" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13.5px; font-family:var(--font-body);">
+      <select id="csvSiteFilter" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13.5px; font-family:var(--font-body); margin-bottom:12px;">
         <option value="all">All sites</option>
+      </select>
+      <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px;">Academic Year</div>
+      <select id="csvAcademicYearFilter" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13.5px; font-family:var(--font-body);">
+        <option value="all">All Years</option>
       </select>
       <div class="modal-error" id="csvFilterError" style="margin-top:8px;"></div>
       <div class="modal-actions">
@@ -3828,9 +3840,16 @@ function showCsvFilterModal(){
 
   const statusSelect = overlay.querySelector('#csvStatusFilter');
   const siteSelect = overlay.querySelector('#csvSiteFilter');
+  const academicYearSelect = overlay.querySelector('#csvAcademicYearFilter');
   const errorEl = overlay.querySelector('#csvFilterError');
   const downloadBtn = overlay.querySelector('#csvDownloadBtn');
   const cancelBtn = overlay.querySelector('#csvCancelBtn');
+
+  const availableYears = [...new Set(roster.map(r => r.academicYear).filter(Boolean))].sort().reverse();
+  if(availableYears.length){
+    academicYearSelect.innerHTML = '<option value="all">All Years</option>' +
+      availableYears.map(y => `<option value="${escapeHtml(y)}">${escapeHtml(y)}</option>`).join('');
+  }
 
   function close(){ overlay.remove(); }
 
@@ -3844,7 +3863,7 @@ function showCsvFilterModal(){
   async function submit(){
     errorEl.textContent = '';
     try{
-      const rowCount = await performCsvDownload(statusSelect.value, siteSelect.value, downloadBtn);
+      const rowCount = await performCsvDownload(statusSelect.value, siteSelect.value, downloadBtn, academicYearSelect.value);
       close();
       showToast(`Downloaded ${rowCount} row(s).`, 'success');
     }catch(err){
