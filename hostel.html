@@ -955,8 +955,7 @@ function populateAcademicYearFilter(){
     const currentYear = getCurrentAcademicYear();
     selectedAcademicYear = years.includes(currentYear) ? currentYear : 'all';
   } else {
-    const previousValue = selectEl.value || selectedAcademicYear;
-    selectedAcademicYear = years.includes(previousValue) || previousValue === 'all' ? previousValue : 'all';
+    selectedAcademicYear = years.includes(selectedAcademicYear) || selectedAcademicYear === 'all' ? selectedAcademicYear : 'all';
   }
   selectEl.value = selectedAcademicYear;
   selectEl.style.display = 'inline-block';
