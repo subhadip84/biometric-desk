@@ -212,6 +212,9 @@
     <button class="btn" id="focusModeBtn" title="Hide side panels for a focused view" style="padding:7px 12px; font-size:12px; font-weight:600; border-radius:6px; background:transparent; color:#fff; border:1px solid #3A4A6B;">◱ Focus</button>
     <button class="btn" id="darkModeBtn" title="Toggle dark mode" style="padding:7px 12px; font-size:12px; font-weight:600; border-radius:6px; background:transparent; color:#fff; border:1px solid #3A4A6B;">🌙</button>
     <button class="btn" id="refreshBtn" style="padding:7px 12px; font-size:12px; font-weight:600; border-radius:6px; background:transparent; color:#fff; border:1px solid #3A4A6B;"><span id="refreshIcon" style="display:inline-block;">⟳</span> Refresh</button>
+    <select id="academicYearFilter" style="display:none; padding:7px 12px; border-radius:6px; border:1px solid #3A4A6B; background:transparent; color:#fff; font-size:12px; font-family:var(--font-body); cursor:pointer;">
+      <option value="all" style="color:#000;">All Years</option>
+    </select>
     <div style="position:relative;">
       <button id="welcomeMsgBtn" style="background:transparent; border:1px solid #3A4A6B; color:#fff; border-radius:6px; padding:6px 11px; font-size:11px; font-weight:400; cursor:pointer; font-family:var(--font-body); display:inline-flex; align-items:center; gap:6px;">
         <span id="welcomeMsg"></span> <span style="font-size:9px; opacity:.8;">▾</span>
@@ -926,6 +929,24 @@ let hostel = [];
 let previousRosterStatus = {};
 let selectedStudentIds = new Set();
 let currentlyDisplayedStudent = null;
+let selectedAcademicYear = 'all';
+
+function getFilteredHostel(){
+  if(selectedAcademicYear === 'all') return hostel;
+  return hostel.filter(s => s.academicYear === selectedAcademicYear);
+}
+
+function populateAcademicYearFilter(){
+  const selectEl = document.getElementById('academicYearFilter');
+  if(!selectEl) return;
+  const years = [...new Set(hostel.map(s => s.academicYear).filter(Boolean))].sort().reverse();
+  if(!years.length){ selectEl.style.display = 'none'; return; }
+  const previousValue = selectEl.value || selectedAcademicYear;
+  selectEl.innerHTML = '<option value="all" style="color:#000;">All Years</option>' + years.map(y => `<option value="${escapeHtml(y)}" style="color:#000;">${escapeHtml(y)}</option>`).join('');
+  selectEl.value = years.includes(previousValue) || previousValue === 'all' ? previousValue : 'all';
+  selectedAcademicYear = selectEl.value;
+  selectEl.style.display = 'inline-block';
+}
 let lastRefreshTime = null;
 let hasHandledLookupDeepLink = false;
 function handleLookupDeepLink(){
@@ -973,6 +994,7 @@ async function loadHostelData(){
     const data = await runScript('getHostelData');
     if(!data.ok){ showToast(data.error || 'Could not load hostel data.', 'error'); return; }
     hostel = data.students;
+    populateAcademicYearFilter();
     document.getElementById('topbarMeta').textContent = `${hostel.length} students · Hostel Data`;
     lastRefreshTime = Date.now();
     updateLastRefreshedLabel();
@@ -1028,35 +1050,36 @@ function launchConfetti(){
 }
 
 function renderStats(){
-  const done = hostel.filter(s => s.status === 'done').length;
-  document.getElementById('statTotal').textContent = hostel.length;
+  const filteredHostel = getFilteredHostel();
+  const done = filteredHostel.filter(s => s.status === 'done').length;
+  document.getElementById('statTotal').textContent = filteredHostel.length;
   document.getElementById('statDone').textContent = done;
-  document.getElementById('statPending').textContent = hostel.length - done;
+  document.getElementById('statPending').textContent = filteredHostel.length - done;
 
-  const percent = hostel.length > 0 ? Math.round((done / hostel.length) * 100) : 0;
+  const percent = filteredHostel.length > 0 ? Math.round((done / filteredHostel.length) * 100) : 0;
   const circumference = 238.76;
   const ringCircle = document.getElementById('progressRingCircle');
   const ringText = document.getElementById('progressRingText');
   if(ringCircle) ringCircle.style.strokeDashoffset = circumference * (1 - percent / 100);
   if(ringText) ringText.textContent = percent + '%';
 
-  if(hostel.length > 0 && done === hostel.length && !hasShownCompletionCelebration){
+  if(filteredHostel.length > 0 && done === filteredHostel.length && !hasShownCompletionCelebration){
     hasShownCompletionCelebration = true;
-    showToast(`All ${hostel.length} hostellers verified! Great work.`, 'success');
+    showToast(`All ${filteredHostel.length} hostellers verified! Great work.`, 'success');
     launchConfetti();
-  } else if(done < hostel.length){
+  } else if(done < filteredHostel.length){
     hasShownCompletionCelebration = false;
   }
 
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-  const verifiedToday = hostel.filter(s => s.status === 'done' && s.verifiedAt && s.verifiedAt.indexOf(todayStr) === 0).length;
+  const verifiedToday = filteredHostel.filter(s => s.status === 'done' && s.verifiedAt && s.verifiedAt.indexOf(todayStr) === 0).length;
   document.getElementById('verifiedTodayCount').textContent = verifiedToday;
 
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const lastDayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
-  const verifiedLastDay = hostel.filter(s => s.status === 'done' && s.verifiedAt && s.verifiedAt.indexOf(lastDayStr) === 0).length;
+  const verifiedLastDay = filteredHostel.filter(s => s.status === 'done' && s.verifiedAt && s.verifiedAt.indexOf(lastDayStr) === 0).length;
   document.getElementById('verifiedLastDayCount').textContent = verifiedLastDay;
 
   if(isAdminOrDemo){
@@ -1076,7 +1099,7 @@ function renderStats(){
 let hostelSummaryChartInstance = null;
 function getHostelSummaryRows(){
   const byHostel = {};
-  hostel.forEach(s => {
+  getFilteredHostel().forEach(s => {
     const key = s.hostelName || '(No Hostel Assigned)';
     if(!byHostel[key]) byHostel[key] = { done: 0, pending: 0 };
     if(s.status === 'done') byHostel[key].done++; else byHostel[key].pending++;
@@ -1150,7 +1173,7 @@ function renderHostelTrendChart(){
   }
   const counts = {};
   days.forEach(d => counts[d] = 0);
-  hostel.forEach(s => {
+  getFilteredHostel().forEach(s => {
     if(!s.verifiedAt) return;
     const dayKey = s.verifiedAt.slice(0, 10);
     if(counts.hasOwnProperty(dayKey)) counts[dayKey]++;
@@ -1507,7 +1530,7 @@ document.getElementById('bulkClearSelectionBtn')?.addEventListener('click', () =
 
 function renderTable(){
   const tbody = document.getElementById('tableBody');
-  let rows = hostel;
+  let rows = getFilteredHostel();
   if(currentTableFilter === 'done') rows = rows.filter(s => s.status === 'done');
   if(currentTableFilter === 'pending') rows = rows.filter(s => s.status !== 'done');
   const q = (document.getElementById('tableQuickFilter')?.value || '').trim().toLowerCase();
@@ -1604,6 +1627,12 @@ function runHostelSearch(){
   else renderSuggestions(matches);
 }
 document.getElementById('searchBtn').addEventListener('click', runHostelSearch);
+
+document.getElementById('academicYearFilter')?.addEventListener('change', (e) => {
+  selectedAcademicYear = e.target.value;
+  renderStats();
+  renderTable();
+});
 
 // Keyboard shortcuts for the hostel desk. Skipped entirely while the person
 // is typing in any input/textarea/select, except Escape (which should
@@ -2093,7 +2122,7 @@ async function showCustomReportModal(){
 }
 
 function generateCustomReportOutput(config){
-  let rows = hostel.slice();
+  let rows = getFilteredHostel().slice();
   if(config.status !== 'all') rows = rows.filter(s => s.status === config.status);
   if(config.siteCode !== 'all') rows = rows.filter(s => s.hostelName === config.siteCode);
   if(config.dateFrom) rows = rows.filter(s => s.verifiedAt && s.verifiedAt.slice(0,10) >= config.dateFrom);
@@ -2482,7 +2511,7 @@ function showHostelCsvFilterModal(){
     errEl.textContent = '';
     downloadBtn.disabled = true; downloadBtn.textContent = 'Preparing…';
     try{
-      const data = await runScript('exportHostelAsCsv', statusSelect.value);
+      const data = await runScript('exportHostelAsCsv', statusSelect.value, selectedAcademicYear);
       if(!data.ok) throw new Error(data.error || 'Export failed.');
       const blob = new Blob([data.csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
