@@ -212,7 +212,7 @@
     <button class="btn" id="focusModeBtn" title="Hide side panels for a focused view" style="padding:7px 12px; font-size:12px; font-weight:600; border-radius:6px; background:transparent; color:#fff; border:1px solid #3A4A6B;">◱ Focus</button>
     <button class="btn" id="darkModeBtn" title="Toggle dark mode" style="padding:7px 12px; font-size:12px; font-weight:600; border-radius:6px; background:transparent; color:#fff; border:1px solid #3A4A6B;">🌙</button>
     <button class="btn" id="refreshBtn" style="padding:7px 12px; font-size:12px; font-weight:600; border-radius:6px; background:transparent; color:#fff; border:1px solid #3A4A6B;"><span id="refreshIcon" style="display:inline-block;">⟳</span> Refresh</button>
-    <select id="academicYearFilter" style="display:none; padding:7px 12px; border-radius:6px; border:1px solid #3A4A6B; background:transparent; color:#fff; font-size:12px; font-family:var(--font-body); cursor:pointer;">
+    <select id="academicYearFilter" style="display:none; padding:7px 12px; border-radius:6px; border:1px solid #3A4A6B; background:transparent; color:#fff; font-size:12px; font-weight:600; font-family:var(--font-body); cursor:pointer;">
       <option value="all" style="color:#000;">All Years</option>
     </select>
     <div style="position:relative;">
@@ -930,6 +930,13 @@ let previousRosterStatus = {};
 let selectedStudentIds = new Set();
 let currentlyDisplayedStudent = null;
 let selectedAcademicYear = 'all';
+let hasInitializedAcademicYearFilter = false;
+
+function getCurrentAcademicYear(){
+  const now = new Date();
+  const year = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+  return `${year}-${String(year + 1).slice(-2)}`;
+}
 
 function getFilteredHostel(){
   if(selectedAcademicYear === 'all') return hostel;
@@ -941,10 +948,17 @@ function populateAcademicYearFilter(){
   if(!selectEl) return;
   const years = [...new Set(hostel.map(s => s.academicYear).filter(Boolean))].sort().reverse();
   if(!years.length){ selectEl.style.display = 'none'; return; }
-  const previousValue = selectEl.value || selectedAcademicYear;
   selectEl.innerHTML = '<option value="all" style="color:#000;">All Years</option>' + years.map(y => `<option value="${escapeHtml(y)}" style="color:#000;">${escapeHtml(y)}</option>`).join('');
-  selectEl.value = years.includes(previousValue) || previousValue === 'all' ? previousValue : 'all';
-  selectedAcademicYear = selectEl.value;
+
+  if(!hasInitializedAcademicYearFilter){
+    hasInitializedAcademicYearFilter = true;
+    const currentYear = getCurrentAcademicYear();
+    selectedAcademicYear = years.includes(currentYear) ? currentYear : 'all';
+  } else {
+    const previousValue = selectEl.value || selectedAcademicYear;
+    selectedAcademicYear = years.includes(previousValue) || previousValue === 'all' ? previousValue : 'all';
+  }
+  selectEl.value = selectedAcademicYear;
   selectEl.style.display = 'inline-block';
 }
 let lastRefreshTime = null;
@@ -2328,6 +2342,7 @@ function renderDetail(s){
         <div class="detail-grid">
           <div class="detail-item"><div class="lab">Application No</div><div class="val">${escapeHtml(s.applicationNo)||'—'}</div></div>
           <div class="detail-item"><div class="lab">Registration No</div><div class="val">${escapeHtml(s.registrationNo)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Academic Year</div><div class="val">${escapeHtml(s.academicYear)||'—'}</div></div>
           <div class="detail-item"><div class="lab">Machine Code</div><div class="val">${escapeHtml(s.machineCode)||'—'}</div></div>
           <div class="detail-item"><div class="lab">Site Code</div><div class="val">${escapeHtml(s.siteCode)||'—'}</div></div>
           <div class="detail-item"><div class="lab">Course</div><div class="val">${escapeHtml(s.course)||'—'}</div></div>
