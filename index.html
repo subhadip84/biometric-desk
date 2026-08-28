@@ -436,6 +436,9 @@
     <button class="refresh-btn" id="refreshBtn"><span class="refresh-icon" id="refreshIcon">⟳</span> Refresh</button>
     <button class="refresh-btn" id="focusModeBtn" title="Hide side panels for a focused view">◱ Focus</button>
     <button class="refresh-btn" id="darkModeBtn" title="Toggle dark mode">🌙</button>
+    <select id="academicYearFilter" style="display:none; padding:8px 12px; border-radius:7px; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.1); color:#fff; font-size:12.5px; font-family:var(--font-body); cursor:pointer;">
+      <option value="all">All Years</option>
+    </select>
     <div class="user-menu">
       <button class="welcome-btn" id="welcomeMsgBtn"><span id="welcomeMsg">Welcome</span> <span class="caret">▾</span></button>
       <div class="user-menu-dropdown" id="userMenuDropdown">
@@ -716,6 +719,29 @@ let roster = [];
 let previousRosterStatus = {};
 let selectedStudentIds = new Set();
 let currentlyDisplayedStudent = null;
+let selectedAcademicYear = 'all';
+
+// Returns the roster narrowed to the currently selected academic year, or
+// the full roster if "All Years" is selected. This is the single source
+// used by the table, dashboard stats, and exports so the filter applies
+// consistently everywhere rather than needing to be re-implemented at
+// each call site.
+function getFilteredRoster(){
+  if(selectedAcademicYear === 'all') return roster;
+  return roster.filter(r => r.academicYear === selectedAcademicYear);
+}
+
+function populateAcademicYearFilter(){
+  const selectEl = document.getElementById('academicYearFilter');
+  if(!selectEl) return;
+  const years = [...new Set(roster.map(r => r.academicYear).filter(Boolean))].sort().reverse();
+  if(!years.length){ selectEl.style.display = 'none'; return; }
+  const previousValue = selectEl.value || selectedAcademicYear;
+  selectEl.innerHTML = '<option value="all">All Years</option>' + years.map(y => `<option value="${escapeHtml(y)}">${escapeHtml(y)}</option>`).join('');
+  selectEl.value = years.includes(previousValue) || previousValue === 'all' ? previousValue : 'all';
+  selectedAcademicYear = selectEl.value;
+  selectEl.style.display = 'inline-block';
+}
 let lastRefreshTime = null;
 
 function updateLastRefreshedLabel(){
@@ -964,6 +990,7 @@ async function fetchStudents(){
     if(!data.ok){ showError(data.error || 'Could not load the sheet.'); return; }
     clearError();
     roster = data.students;
+    populateAcademicYearFilter();
     topbarMeta.textContent = `${roster.length} students · ${data.file}`;
     lastRefreshTime = Date.now();
     updateLastRefreshedLabel();
@@ -1075,7 +1102,7 @@ function renderPrioritySites(){
 
   const list = document.getElementById('prioritySitesList');
   const bySite = {};
-  roster.forEach(r => {
+  getFilteredRoster().forEach(r => {
     const key = r.siteCode || '(No Site Code)';
     if(!bySite[key]) bySite[key] = 0;
     if(r.status !== 'done') bySite[key]++;
@@ -1144,7 +1171,7 @@ function updateTodayVerifiedCount(){
   if(!el) return;
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-  todayVerifiedList = roster.filter(r => r.status === 'done' && r.verifiedAt && r.verifiedAt.indexOf(todayStr) === 0);
+  todayVerifiedList = getFilteredRoster().filter(r => r.status === 'done' && r.verifiedAt && r.verifiedAt.indexOf(todayStr) === 0);
   animateNumber(el, todayVerifiedList.length);
 
   const isAdmin = sessionStorage.getItem(ADMIN_KEY) === 'yes';
@@ -1170,7 +1197,7 @@ function updateLastDayVerifiedCount(){
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const lastDayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
-  lastDayVerifiedList = roster.filter(r => r.status === 'done' && r.verifiedAt && r.verifiedAt.indexOf(lastDayStr) === 0);
+  lastDayVerifiedList = getFilteredRoster().filter(r => r.status === 'done' && r.verifiedAt && r.verifiedAt.indexOf(lastDayStr) === 0);
   animateNumber(el, lastDayVerifiedList.length);
 
   const isAdmin = sessionStorage.getItem(ADMIN_KEY) === 'yes';
@@ -1538,19 +1565,20 @@ if(spotCheckBtn){
 }
 
 function renderStats(){
-  const done = roster.filter(r => r.status === 'done').length;
-  animateNumber(document.getElementById('statTotal'), roster.length);
+  const filteredRoster = getFilteredRoster();
+  const done = filteredRoster.filter(r => r.status === 'done').length;
+  animateNumber(document.getElementById('statTotal'), filteredRoster.length);
   animateNumber(document.getElementById('statDone'), done);
-  animateNumber(document.getElementById('statPending'), roster.length - done);
+  animateNumber(document.getElementById('statPending'), filteredRoster.length - done);
 
-  const percent = roster.length > 0 ? Math.round((done / roster.length) * 100) : 0;
+  const percent = filteredRoster.length > 0 ? Math.round((done / filteredRoster.length) * 100) : 0;
   const circumference = 238.76;
   const ringCircle = document.getElementById('progressRingCircle');
   const ringText = document.getElementById('progressRingText');
   if(ringCircle) ringCircle.style.strokeDashoffset = circumference * (1 - percent / 100);
   animateNumber(ringText, percent, '%');
 
-  if(roster.length > 0 && done === roster.length && !hasShownCompletionCelebration){
+  if(filteredRoster.length > 0 && done === filteredRoster.length && !hasShownCompletionCelebration){
     hasShownCompletionCelebration = true;
     showToast(`All ${roster.length} students verified! Great work.`, 'success');
     launchConfetti();
@@ -1608,6 +1636,18 @@ function runSearch(){
   else renderSuggList(matches);
 }
 document.getElementById('searchBtn').addEventListener('click', runSearch);
+
+document.getElementById('academicYearFilter')?.addEventListener('change', (e) => {
+  selectedAcademicYear = e.target.value;
+  renderStats();
+  renderTable();
+  updateTodayVerifiedCount();
+  if(sessionStorage.getItem(ADMIN_KEY) === 'yes'){
+    renderSiteSummary();
+    renderTrendChart();
+    renderPrioritySites();
+  }
+});
 
 // Keyboard shortcuts for the verification desk. Skipped entirely while the
 // person is typing in any input/textarea/select, except Escape (which
@@ -2161,7 +2201,7 @@ async function showCustomReportModal(){
 }
 
 function generateCustomReportOutput(config){
-  let rows = roster.slice();
+  let rows = getFilteredRoster().slice();
   if(config.status !== 'all') rows = rows.filter(r => r.status === config.status);
   if(config.siteCode !== 'all') rows = rows.filter(r => r.siteCode === config.siteCode);
   if(config.dateFrom) rows = rows.filter(r => r.verifiedAt && r.verifiedAt.slice(0,10) >= config.dateFrom);
@@ -2651,9 +2691,9 @@ document.getElementById('bulkClearSelectionBtn')?.addEventListener('click', () =
 
 function renderTable(){
   const tbody = document.getElementById('tableBody');
-  let rows = roster;
-  if(currentFilter === 'done') rows = roster.filter(r => r.status === 'done');
-  if(currentFilter === 'pending') rows = roster.filter(r => r.status !== 'done');
+  let rows = getFilteredRoster();
+  if(currentFilter === 'done') rows = rows.filter(r => r.status === 'done');
+  if(currentFilter === 'pending') rows = rows.filter(r => r.status !== 'done');
 
   if(tableSortKey){
     rows = rows.slice().sort((a, b) => {
@@ -2793,7 +2833,7 @@ function renderSiteSummary(){
   if(!panel || panel.style.display === 'none') return; // admin-only, skip work if hidden
 
   const bySite = {};
-  roster.forEach(r => {
+  getFilteredRoster().forEach(r => {
     const key = r.siteCode || '(No Site Code)';
     if(!bySite[key]) bySite[key] = { done: 0, pending: 0 };
     if(r.status === 'done') bySite[key].done++;
@@ -2910,7 +2950,7 @@ function renderTrendChart(){
   }
   const counts = {};
   days.forEach(d => counts[d] = 0);
-  roster.forEach(s => {
+  getFilteredRoster().forEach(s => {
     if(!s.verifiedAt) return;
     const dayKey = s.verifiedAt.slice(0, 10);
     if(counts.hasOwnProperty(dayKey)) counts[dayKey]++;
@@ -3726,7 +3766,7 @@ async function performCsvDownload(statusFilter, siteFilter, triggerBtn){
   triggerBtn.disabled = true;
   triggerBtn.textContent = 'Preparing…';
   try{
-    const data = await runScript('exportRosterAsCsv', statusFilter, siteFilter);
+    const data = await runScript('exportRosterAsCsv', statusFilter, siteFilter, selectedAcademicYear);
     if(!data.ok) throw new Error(data.error || 'Could not export the roster.');
     const blob = new Blob([data.csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
