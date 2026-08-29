@@ -133,9 +133,11 @@
   @media (max-width: 880px){ .layout{ grid-template-columns:1fr; } }
   @media (max-width: 520px){
     #topbarMeta{ display:none; }
-    #academicYearFilter{ max-width:110px; }
-    .topbar-actions{ flex-wrap:wrap; }
-    .user-menu{ flex-basis:100%; display:flex; justify-content:flex-end; margin-top:6px; }
+    #academicYearFilter{ max-width:80px; padding:6px 8px !important; font-size:11px !important; }
+    .topbar-actions{ gap:6px !important; }
+    #focusModeBtn, #darkModeBtn{ padding:6px 8px !important; font-size:11px !important; }
+    #focusModeBtn .btn-label{ display:none; }
+    .welcome-btn{ padding:5px 8px !important; font-size:10.5px !important; }
     #helpChatPanel{ left:12px !important; right:12px !important; width:auto !important; bottom:76px !important; }
     table{ font-size:12px; }
     th, td{ padding:6px 8px !important; }
@@ -443,7 +445,7 @@
     <div class="topbar-meta" id="topbarMeta" style="display:none;">Loading…</div>
     <div class="topbar-meta" id="lastRefreshedLabel" style="font-size:10.5px; opacity:.7; margin-top:2px;"></div>
     <button class="refresh-btn" id="refreshBtn" title="Refresh"><i class="ti ti-refresh refresh-icon" id="refreshIcon" aria-hidden="true"></i></button>
-    <button class="refresh-btn" id="focusModeBtn" title="Hide side panels for a focused view">◱ Focus</button>
+    <button class="refresh-btn" id="focusModeBtn" title="Hide side panels for a focused view">◱ <span class="btn-label">Focus</span></button>
     <button class="refresh-btn" id="darkModeBtn" title="Toggle dark mode">🌙</button>
     <select id="academicYearFilter" style="display:none; padding:7px 12px; border-radius:6px; border:1px solid #3A4A6B; background:transparent; color:#fff; font-size:12px; font-weight:600; font-family:var(--font-body); cursor:pointer;">
       <option value="all" style="color:#000;">All Years</option>
