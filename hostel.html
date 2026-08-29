@@ -180,13 +180,8 @@
   .toast.show{ opacity:1; transform:translateY(0); }
   .toast.toast-success{ background:var(--color-success); }
   .toast.toast-error{ background:var(--color-pending); }
-  #refreshIcon.spinning{ animation: refreshSpinPlayful 0.9s cubic-bezier(.55,.05,.4,.95) infinite; }
+  #refreshIcon.spinning{ animation: hostelSpin 0.8s linear infinite; }
   @keyframes hostelSpin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
-  @keyframes refreshSpinPlayful{
-    0%{ transform:rotate(0deg) scale(1); }
-    45%{ transform:rotate(200deg) scale(1.15); }
-    100%{ transform:rotate(360deg) scale(1); }
-  }
   @keyframes micPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.4; } }
   .menu-item{
     display:flex; align-items:center; width:100%; text-align:left; padding:10px 14px; background:none;
