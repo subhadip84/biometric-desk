@@ -84,7 +84,7 @@
   .layout{ display:grid; grid-template-columns:340px 1fr; gap:20px; align-items:start; }
   @media (max-width:860px){ .layout{ grid-template-columns:1fr; } }
   @media (max-width: 520px){
-    #refreshBtn{ padding:6px 10px !important; font-size:11px !important; }
+    #refreshBtn{ width:32px !important; height:32px !important; font-size:15px !important; }
     #welcomeMsgBtn{ padding:5px 9px !important; font-size:10.5px !important; }
     #academicYearFilter{ max-width:110px; }
     .topbar-actions{ flex-wrap:wrap; }
@@ -178,8 +178,13 @@
   .toast.show{ opacity:1; transform:translateY(0); }
   .toast.toast-success{ background:var(--color-success); }
   .toast.toast-error{ background:var(--color-pending); }
-  #refreshIcon.spinning{ animation: hostelSpin 0.7s linear infinite; }
+  #refreshIcon.spinning{ animation: refreshSpinPlayful 0.9s cubic-bezier(.55,.05,.4,.95) infinite; }
   @keyframes hostelSpin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
+  @keyframes refreshSpinPlayful{
+    0%{ transform:rotate(0deg) scale(1); }
+    45%{ transform:rotate(200deg) scale(1.15); }
+    100%{ transform:rotate(360deg) scale(1); }
+  }
   @keyframes micPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.4; } }
   .menu-item{
     display:flex; align-items:center; width:100%; text-align:left; padding:10px 14px; background:none;
@@ -214,7 +219,7 @@
     <span class="topbar-meta" id="lastRefreshedLabel" style="font-size:10.5px; color:#8a99b8;"></span>
     <button class="btn" id="focusModeBtn" title="Hide side panels for a focused view" style="padding:7px 12px; font-size:12px; font-weight:600; border-radius:6px; background:transparent; color:#fff; border:1px solid #3A4A6B;">◱ Focus</button>
     <button class="btn" id="darkModeBtn" title="Toggle dark mode" style="padding:7px 12px; font-size:12px; font-weight:600; border-radius:6px; background:transparent; color:#fff; border:1px solid #3A4A6B;">🌙</button>
-    <button class="btn" id="refreshBtn" style="padding:7px 12px; font-size:12px; font-weight:600; border-radius:6px; background:transparent; color:#fff; border:1px solid #3A4A6B;"><span id="refreshIcon" style="display:inline-block;">⟳</span> Refresh</button>
+    <button class="btn" id="refreshBtn" title="Refresh" style="width:34px; height:34px; padding:0; font-size:17px; border-radius:50%; background:transparent; color:#fff; border:1px solid #3A4A6B; display:inline-flex; align-items:center; justify-content:center;"><span id="refreshIcon" style="display:inline-block;">⟳</span></button>
     <select id="academicYearFilter" style="display:none; padding:7px 12px; border-radius:6px; border:1px solid #3A4A6B; background:transparent; color:#fff; font-size:12px; font-weight:600; font-family:var(--font-body); cursor:pointer;">
       <option value="all" style="color:#000;">All Years</option>
     </select>
