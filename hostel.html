@@ -86,10 +86,11 @@
   @media (max-width:860px){ .layout{ grid-template-columns:1fr; } }
   @media (max-width: 520px){
     #refreshBtn{ width:32px !important; height:32px !important; font-size:15px !important; }
-    #welcomeMsgBtn{ padding:5px 9px !important; font-size:10.5px !important; }
-    #academicYearFilter{ max-width:110px; }
-    .topbar-actions{ flex-wrap:wrap; }
-    .welcome-wrap{ flex-basis:100%; display:flex; justify-content:flex-end; margin-top:6px; }
+    #welcomeMsgBtn{ padding:5px 8px !important; font-size:10.5px !important; }
+    #academicYearFilter{ max-width:80px; padding:6px 8px !important; font-size:11px !important; }
+    #focusModeBtn, #darkModeBtn{ padding:6px 8px !important; font-size:11px !important; }
+    #focusModeBtn .btn-label{ display:none; }
+    .topbar-actions{ gap:6px !important; }
     #helpChatPanel{ left:12px !important; right:12px !important; width:auto !important; bottom:76px !important; }
     table{ font-size:12px; }
     th, td{ padding:6px 8px !important; }
@@ -218,7 +219,7 @@
   <div class="topbar-actions" style="display:flex; align-items:center; gap:16px;">
     <span class="topbar-meta" id="topbarMeta" style="font-size:12px; color:#B9C2D6; display:none;">Loading…</span>
     <span class="topbar-meta" id="lastRefreshedLabel" style="font-size:10.5px; color:#8a99b8;"></span>
-    <button class="btn" id="focusModeBtn" title="Hide side panels for a focused view" style="padding:7px 12px; font-size:12px; font-weight:600; border-radius:6px; background:transparent; color:#fff; border:1px solid #3A4A6B;">◱ Focus</button>
+    <button class="btn" id="focusModeBtn" title="Hide side panels for a focused view" style="padding:7px 12px; font-size:12px; font-weight:600; border-radius:6px; background:transparent; color:#fff; border:1px solid #3A4A6B;">◱ <span class="btn-label">Focus</span></button>
     <button class="btn" id="darkModeBtn" title="Toggle dark mode" style="padding:7px 12px; font-size:12px; font-weight:600; border-radius:6px; background:transparent; color:#fff; border:1px solid #3A4A6B;">🌙</button>
     <button class="btn" id="refreshBtn" title="Refresh" style="width:34px; height:34px; padding:0; font-size:17px; border-radius:50%; background:transparent; color:#fff; border:1px solid #3A4A6B; display:inline-flex; align-items:center; justify-content:center;"><i class="ti ti-refresh" id="refreshIcon" style="display:inline-block;" aria-hidden="true"></i></button>
     <select id="academicYearFilter" style="display:none; padding:7px 12px; border-radius:6px; border:1px solid #3A4A6B; background:transparent; color:#fff; font-size:12px; font-weight:600; font-family:var(--font-body); cursor:pointer;">
