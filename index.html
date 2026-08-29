@@ -94,9 +94,14 @@
   .topbar-meta{ font-size:12px; color:#B9C2D6; text-align:right; }
   .refresh-btn{ background:transparent; border:1px solid #3A4A6B; color:#fff; border-radius:6px; padding:7px 12px; font-size:12px; font-weight:600; font-family:var(--font-body); cursor:pointer; }
   .refresh-btn:hover{ background:#22335A; }
-  .refresh-icon{ display:inline-block; margin-right:2px; }
-  .refresh-icon.spinning{ animation: spin 0.7s linear infinite; }
-  @keyframes spin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
+  #refreshBtn{ width:34px; height:34px; padding:0; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:17px; }
+  .refresh-icon{ display:inline-block; }
+  .refresh-icon.spinning{ animation: spinPlayful 0.9s cubic-bezier(.55,.05,.4,.95) infinite; }
+  @keyframes spinPlayful{
+    0%{ transform:rotate(0deg) scale(1); }
+    45%{ transform:rotate(200deg) scale(1.15); }
+    100%{ transform:rotate(360deg) scale(1); }
+  }
   .user-menu{ position:relative; }
   .welcome-btn{
     background:transparent; border:1px solid #3A4A6B; color:#fff; border-radius:6px;
@@ -436,7 +441,7 @@
   <div class="topbar-actions" style="display:flex; align-items:center; gap:14px; position:relative;">
     <div class="topbar-meta" id="topbarMeta" style="display:none;">Loading…</div>
     <div class="topbar-meta" id="lastRefreshedLabel" style="font-size:10.5px; opacity:.7; margin-top:2px;"></div>
-    <button class="refresh-btn" id="refreshBtn"><span class="refresh-icon" id="refreshIcon">⟳</span> Refresh</button>
+    <button class="refresh-btn" id="refreshBtn" title="Refresh"><span class="refresh-icon" id="refreshIcon">⟳</span></button>
     <button class="refresh-btn" id="focusModeBtn" title="Hide side panels for a focused view">◱ Focus</button>
     <button class="refresh-btn" id="darkModeBtn" title="Toggle dark mode">🌙</button>
     <select id="academicYearFilter" style="display:none; padding:7px 12px; border-radius:6px; border:1px solid #3A4A6B; background:transparent; color:#fff; font-size:12px; font-weight:600; font-family:var(--font-body); cursor:pointer;">
