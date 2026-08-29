@@ -10,6 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css">
 <style>
   :root{
     --color-bg:#F5F6F9; --color-surface:#FFFFFF;
@@ -219,7 +220,7 @@
     <span class="topbar-meta" id="lastRefreshedLabel" style="font-size:10.5px; color:#8a99b8;"></span>
     <button class="btn" id="focusModeBtn" title="Hide side panels for a focused view" style="padding:7px 12px; font-size:12px; font-weight:600; border-radius:6px; background:transparent; color:#fff; border:1px solid #3A4A6B;">◱ Focus</button>
     <button class="btn" id="darkModeBtn" title="Toggle dark mode" style="padding:7px 12px; font-size:12px; font-weight:600; border-radius:6px; background:transparent; color:#fff; border:1px solid #3A4A6B;">🌙</button>
-    <button class="btn" id="refreshBtn" title="Refresh" style="width:34px; height:34px; padding:0; font-size:17px; border-radius:50%; background:transparent; color:#fff; border:1px solid #3A4A6B; display:inline-flex; align-items:center; justify-content:center;"><span id="refreshIcon" style="display:inline-block;">⟳</span></button>
+    <button class="btn" id="refreshBtn" title="Refresh" style="width:34px; height:34px; padding:0; font-size:17px; border-radius:50%; background:transparent; color:#fff; border:1px solid #3A4A6B; display:inline-flex; align-items:center; justify-content:center;"><i class="ti ti-refresh" id="refreshIcon" style="display:inline-block;" aria-hidden="true"></i></button>
     <select id="academicYearFilter" style="display:none; padding:7px 12px; border-radius:6px; border:1px solid #3A4A6B; background:transparent; color:#fff; font-size:12px; font-weight:600; font-family:var(--font-body); cursor:pointer;">
       <option value="all" style="color:#000;">All Years</option>
     </select>
