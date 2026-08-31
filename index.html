@@ -3341,6 +3341,35 @@ function attachPasswordStrengthUI(inputEl, confirmInputEl){
   });
 }
 
+// Builds the warning banner(s) shown on an import preview, covering both
+// missing values and the wrong kind of data landing in a field (e.g. a
+// name typed into the Registration Number column by mistake).
+function buildImportWarningHtml(validation){
+  if(!validation || !validation.ok) return '';
+  let html = '';
+  if(validation.missingBothCount > 0){
+    html += `<div style="background:var(--color-pending-soft); color:var(--color-pending); border-radius:7px; padding:9px 12px; font-size:12px; margin-bottom:8px;">⚠ ${validation.missingBothCount} row(s) are missing both Application No and Registration Number — these likely won't import reliably.</div>`;
+  }
+  if(validation.issues && validation.issues.length){
+    const byColumn = {};
+    validation.issues.forEach(iss => {
+      const key = `${iss.column} — ${iss.reason}`;
+      if(!byColumn[key]) byColumn[key] = [];
+      byColumn[key].push(iss);
+    });
+    const blocks = Object.entries(byColumn).map(([key, rows]) => {
+      const samples = rows.map(r => `row ${r.row}: "${escapeHtml(r.value)}"`).join(', ');
+      return `<div style="margin-bottom:4px;">• <strong>${escapeHtml(key)}</strong> — ${samples}${rows.length >= 8 ? ', and possibly more' : ''}</div>`;
+    }).join('');
+    html += `<div style="background:#FDECEC; color:#B3261E; border:1px solid #F5C2C0; border-radius:8px; padding:10px 12px; font-size:12px; margin-bottom:8px;">
+      <div style="font-weight:700; margin-bottom:6px;">🛑 Import blocked — some columns contain data that doesn't look right:</div>
+      ${blocks}
+      <div style="margin-top:6px; font-size:11.5px; opacity:.85;">Fix these in your source file and upload again.</div>
+    </div>`;
+  }
+  return html;
+}
+
 function escapeHtml(str){
   return String(str ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
@@ -5306,15 +5335,11 @@ function showImportStudentsModal(){
         const previewRows = parsedRows.slice(0, 5);
 
         let warningHtml = '';
+        let importBlocked = false;
         try{
           const validation = await runScript('validateImportRows', parsedHeaders, parsedRows);
-          if(validation.ok && validation.missingBothCount > 0){
-            warningHtml = `
-              <div style="background:var(--color-pending-soft); color:var(--color-pending); border-radius:7px; padding:9px 12px; font-size:12px; margin-bottom:10px;">
-                ⚠ ${validation.missingBothCount} row(s) are missing both Application No and Registration Number — these likely won't import reliably.
-              </div>
-            `;
-          }
+          warningHtml = buildImportWarningHtml(validation);
+          importBlocked = !!validation.blocked;
         }catch(valErr){ /* validation is best-effort; don't block preview if it fails */ }
 
         previewArea.innerHTML = `
@@ -5331,8 +5356,10 @@ function showImportStudentsModal(){
             </table>
           </div>
         `;
-        adminPasswordInput.style.display = 'block';
-        importBtn.style.display = 'block';
+        if(!importBlocked){
+          adminPasswordInput.style.display = 'block';
+          importBtn.style.display = 'block';
+        }
       }catch(err){
         errorEl.textContent = 'Could not read that file — ' + err.message;
       }
@@ -5521,15 +5548,11 @@ function showImportVerificationModal(){
         const previewRows = parsedRows.slice(0, 5);
 
         let ivWarningHtml = '';
+        let ivImportBlocked = false;
         try{
           const validation = await runScript('validateImportRows', parsedHeaders, parsedRows);
-          if(validation.ok && validation.missingBothCount > 0){
-            ivWarningHtml = `
-              <div style="background:var(--color-pending-soft); color:var(--color-pending); border-radius:7px; padding:9px 12px; font-size:12px; margin-bottom:10px;">
-                ⚠ ${validation.missingBothCount} row(s) are missing both Application No and Registration Number — these won't match any student.
-              </div>
-            `;
-          }
+          ivWarningHtml = buildImportWarningHtml(validation);
+          ivImportBlocked = !!validation.blocked;
         }catch(valErr){ /* validation is best-effort; don't block preview if it fails */ }
 
         previewArea.innerHTML = `
@@ -5546,8 +5569,10 @@ function showImportVerificationModal(){
             </table>
           </div>
         `;
-        adminPasswordInput.style.display = 'block';
-        importBtn.style.display = 'block';
+        if(!ivImportBlocked){
+          adminPasswordInput.style.display = 'block';
+          importBtn.style.display = 'block';
+        }
       }catch(err){
         errorEl.textContent = 'Could not read that file — ' + err.message;
       }
