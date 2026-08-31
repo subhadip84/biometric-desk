@@ -188,6 +188,8 @@
     border:none; cursor:pointer; font-size:13px; color:var(--color-text); border-radius:6px; font-family:var(--font-body); font-weight:500;
   }
   .menu-item:hover{ background:#F0F2F6; }
+  .menu-group-label{ font-size:10.5px; font-weight:700; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.4px; padding:8px 14px 3px; }
+  .menu-group + .menu-group{ border-top:1px solid var(--color-border); margin-top:4px; padding-top:2px; }
   .chip.active{ background:var(--color-navy) !important; color:#fff !important; border-color:var(--color-navy) !important; }
 </style>
 </head>
@@ -225,15 +227,39 @@
         <span id="welcomeMsg"></span> <span style="font-size:9px; opacity:.8;">▾</span>
       </button>
       <div id="welcomeDropdown" style="display:none; position:absolute; top:calc(100% + 8px); right:0; background:#fff; border-radius:10px; box-shadow:0 14px 36px rgba(0,0,0,.28); min-width:220px; padding:6px; z-index:1000;">
-        <button class="menu-item" id="changePasswordBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="12" r="4"/><path d="M11 12h9m-4 0v4m4-4v3"/></svg>Change Password</button>
-        <a class="menu-item" id="backToMainLink" href="index.html" style="text-decoration:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back to Main App</a>
-        <button class="menu-item" id="hostelActivityLogBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>Activity Log</button>
-        <button class="menu-item" id="hostelHelpStatsBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10m6 10V4m6 16v-7"/></svg>Help Question Stats</button>
-        <button class="menu-item" id="hostelEodSummaryBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>End of Day Summary</button>
-        <button class="menu-item" id="hostelCustomReportBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9l-6-6z"/><path d="M13 3v6h6"/><line x1="9" y1="14" x2="15" y2="14"/><line x1="9" y1="17" x2="13" y2="17"/></svg>Custom Report</button>
-        <button class="menu-item" id="downloadCsvBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Download Report (CSV)</button>
-        <button class="menu-item" id="importNewBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg>Import New Hostel Data</button>
-        <button class="menu-item" id="importVerifyBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Import Face Capture Updates</button>
+        <div style="display:flex; align-items:center; gap:10px; padding:10px 12px 12px; border-bottom:1px solid var(--color-border); margin-bottom:6px;">
+          <div id="menuProfileAvatar" style="width:34px; height:34px; border-radius:50%; background:var(--color-gold-soft); color:var(--color-navy); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0;">?</div>
+          <div style="min-width:0;">
+            <div id="menuProfileName" style="font-size:13px; font-weight:700; color:var(--color-heading); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">User</div>
+            <div id="menuProfileRole" style="font-size:11px; color:var(--color-text-muted);">Staff</div>
+          </div>
+        </div>
+
+        <div class="menu-group" id="menuGroupData">
+          <div class="menu-group-label">Data</div>
+          <button class="menu-item" id="downloadCsvBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Download Report (CSV)</button>
+          <button class="menu-item" id="importNewBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg>Import New Hostel Data</button>
+          <button class="menu-item" id="importVerifyBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Import Face Capture Updates</button>
+          <button class="menu-item" id="hostelCustomReportBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9l-6-6z"/><path d="M13 3v6h6"/><line x1="9" y1="14" x2="15" y2="14"/><line x1="9" y1="17" x2="13" y2="17"/></svg>Custom Report</button>
+        </div>
+
+        <div class="menu-group" id="menuGroupReports">
+          <div class="menu-group-label">Reports &amp; Monitoring</div>
+          <button class="menu-item" id="hostelActivityLogBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>Activity Log</button>
+          <button class="menu-item" id="hostelEodSummaryBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>End of Day Summary</button>
+          <button class="menu-item" id="hostelHelpStatsBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10m6 10V4m6 16v-7"/></svg>Help Question Stats</button>
+        </div>
+
+        <div class="menu-group" id="menuGroupNav">
+          <div class="menu-group-label">Navigation</div>
+          <a class="menu-item" id="backToMainLink" href="index.html" style="text-decoration:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back to Main App</a>
+        </div>
+
+        <div class="menu-group" id="menuGroupAccount">
+          <div class="menu-group-label">Account</div>
+          <button class="menu-item" id="changePasswordBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="12" r="4"/><path d="M11 12h9m-4 0v4m4-4v3"/></svg>Change Password</button>
+        </div>
+
         <div style="height:1px; background:var(--color-border); margin:4px 2px;"></div>
         <button class="menu-item" id="logoutBtn" style="color:var(--color-pending);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>Logout</button>
       </div>
@@ -468,6 +494,29 @@ if(isHostellerOnly){
   const backLink = document.getElementById('backToMainLink');
   if(backLink) backLink.style.display = 'none';
 }
+
+// Populate the welcome menu's profile header (avatar initials, name, role)
+const menuProfileName = document.getElementById('menuProfileName');
+const menuProfileRole = document.getElementById('menuProfileRole');
+const menuProfileAvatar = document.getElementById('menuProfileAvatar');
+const menuDisplayName = sessionStorage.getItem(USERNAME_KEY) || (isAdminOrDemo ? 'Admin' : 'Staff');
+let menuRoleLabel = 'Staff';
+if(sessionStorage.getItem(ADMIN_KEY) === 'yes') menuRoleLabel = 'Administrator';
+else if(sessionStorage.getItem(DEMO_KEY) === 'yes') menuRoleLabel = 'Demo Account';
+else if(sessionStorage.getItem(VIEWER_KEY) === 'yes') menuRoleLabel = 'Viewer (Read-only)';
+else if(isHostellerOnly) menuRoleLabel = 'Hosteller Desk';
+if(menuProfileName) menuProfileName.textContent = menuDisplayName;
+if(menuProfileRole) menuProfileRole.textContent = menuRoleLabel;
+if(menuProfileAvatar) menuProfileAvatar.textContent = menuDisplayName.trim().charAt(0).toUpperCase() || '?';
+
+// Hide a group's section label entirely if every item inside it is
+// currently hidden for this user's permissions.
+document.querySelectorAll('.menu-group').forEach(group => {
+  const items = group.querySelectorAll('.menu-item');
+  const anyVisible = Array.from(items).some(item => item.style.display !== 'none');
+  group.style.display = anyVisible ? 'block' : 'none';
+});
+
 if(isAdminOrDemo){
   const verifiedTodayCount = document.getElementById('verifiedTodayCount');
   const verifiedTodayHint = document.getElementById('verifiedTodayHint');
