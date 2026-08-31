@@ -112,8 +112,14 @@
     display:none; position:absolute; top:calc(100% + 8px); right:0;
     background:#fff; border-radius:10px; box-shadow:0 14px 36px rgba(0,0,0,.28);
     min-width:210px; padding:6px; z-index:1000;
-    max-height:calc(100vh - 90px); overflow-y:auto;
+    max-height:calc(100vh - 90px); overflow-y:auto; overflow-x:hidden;
+    scrollbar-width:thin;
+    scrollbar-color:var(--color-border) transparent;
   }
+  .user-menu-dropdown::-webkit-scrollbar{ width:6px; }
+  .user-menu-dropdown::-webkit-scrollbar-track{ background:transparent; border-radius:10px; }
+  .user-menu-dropdown::-webkit-scrollbar-thumb{ background:var(--color-border); border-radius:10px; }
+  .user-menu-dropdown::-webkit-scrollbar-thumb:hover{ background:var(--color-text-muted); }
   .user-menu-dropdown.open{ display:block; }
   .menu-item{
     display:flex; align-items:center; gap:9px; width:100%; text-align:left; padding:10px 14px; background:none;
