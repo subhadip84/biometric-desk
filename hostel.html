@@ -306,10 +306,8 @@
         <div id="todayStatsGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; text-align:center;">
           <div style="padding:0 8px;">
             <div style="font-size:11px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;">Verified Today</div>
-            <div style="display:flex; align-items:baseline; justify-content:center; gap:5px;">
-              <div style="font-family:var(--font-display); font-size:32px; font-weight:700; color:var(--color-success);" id="verifiedTodayCount">0</div>
-              <span id="verifiedTodayTrend" style="font-size:11px; font-weight:600; display:none;"></span>
-            </div>
+            <div style="font-family:var(--font-display); font-size:32px; font-weight:700; color:var(--color-success);" id="verifiedTodayCount">0</div>
+            <div id="verifiedTodayTrend" style="font-size:11px; font-weight:600; display:none; margin-top:2px;"></div>
             <div id="verifiedTodayHint" style="font-size:10.5px; color:var(--color-text-muted); margin-top:4px; display:none;">Click to download</div>
           </div>
           <div style="border-left:1px solid var(--color-border); padding:0 8px;">
@@ -1187,7 +1185,7 @@ function renderStats(){
 
   const trendEl = document.getElementById('verifiedTodayTrend');
   if(trendEl){
-    if(verifiedLastDay > 0){
+    if(verifiedLastDay > 0 && verifiedToday > 0){
       const pctChange = Math.round(((verifiedToday - verifiedLastDay) / verifiedLastDay) * 100);
       if(pctChange > 0){
         trendEl.textContent = `↑${pctChange}%`;
@@ -1199,7 +1197,7 @@ function renderStats(){
         trendEl.textContent = '—';
         trendEl.style.color = 'var(--color-text-muted)';
       }
-      trendEl.style.display = 'inline';
+      trendEl.style.display = 'block';
     } else {
       trendEl.style.display = 'none';
     }
