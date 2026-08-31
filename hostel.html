@@ -189,6 +189,11 @@
   }
   .menu-item:hover{ background:#F0F2F6; }
   .menu-group-label{ font-size:10.5px; font-weight:700; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.4px; padding:8px 14px 3px; }
+  #welcomeDropdown{ overflow-x:hidden; scrollbar-width:thin; scrollbar-color:var(--color-border) transparent; }
+  #welcomeDropdown::-webkit-scrollbar{ width:6px; }
+  #welcomeDropdown::-webkit-scrollbar-track{ background:transparent; border-radius:10px; }
+  #welcomeDropdown::-webkit-scrollbar-thumb{ background:var(--color-border); border-radius:10px; }
+  #welcomeDropdown::-webkit-scrollbar-thumb:hover{ background:var(--color-text-muted); }
   .menu-group + .menu-group{ border-top:1px solid var(--color-border); margin-top:4px; padding-top:2px; }
   .chip.active{ background:var(--color-navy) !important; color:#fff !important; border-color:var(--color-navy) !important; }
 </style>
