@@ -152,6 +152,8 @@
   @keyframes checkDrawIn{ from{ stroke-dashoffset:20; } to{ stroke-dashoffset:0; } }
   .check-draw-in{ stroke-dasharray:20; stroke-dashoffset:20; animation:checkDrawIn .5s ease-out .1s forwards; }
   tbody tr:hover{ background:#F7F9FC; }
+  .row-hover-hint{ opacity:0; margin-left:6px; color:var(--color-text-muted); font-size:13px; transition:opacity .15s; }
+  tbody tr:hover .row-hover-hint{ opacity:1; }
   .status-pill{ font-size:10.5px; padding:2px 9px; border-radius:20px; font-weight:600; }
   .status-pill.done{ background:var(--color-success-soft); color:var(--color-success); }
   .status-pill.pending{ background:var(--color-pending-soft); color:var(--color-pending); }
@@ -304,7 +306,10 @@
         <div id="todayStatsGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; text-align:center;">
           <div style="padding:0 8px;">
             <div style="font-size:11px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;">Verified Today</div>
-            <div style="font-family:var(--font-display); font-size:32px; font-weight:700; color:var(--color-success);" id="verifiedTodayCount">0</div>
+            <div style="display:flex; align-items:baseline; justify-content:center; gap:5px;">
+              <div style="font-family:var(--font-display); font-size:32px; font-weight:700; color:var(--color-success);" id="verifiedTodayCount">0</div>
+              <span id="verifiedTodayTrend" style="font-size:11px; font-weight:600; display:none;"></span>
+            </div>
             <div id="verifiedTodayHint" style="font-size:10.5px; color:var(--color-text-muted); margin-top:4px; display:none;">Click to download</div>
           </div>
           <div style="border-left:1px solid var(--color-border); padding:0 8px;">
@@ -1180,6 +1185,26 @@ function renderStats(){
   const verifiedLastDay = filteredHostel.filter(s => s.status === 'done' && s.verifiedAt && s.verifiedAt.indexOf(lastDayStr) === 0).length;
   document.getElementById('verifiedLastDayCount').textContent = verifiedLastDay;
 
+  const trendEl = document.getElementById('verifiedTodayTrend');
+  if(trendEl){
+    if(verifiedLastDay > 0){
+      const pctChange = Math.round(((verifiedToday - verifiedLastDay) / verifiedLastDay) * 100);
+      if(pctChange > 0){
+        trendEl.textContent = `↑${pctChange}%`;
+        trendEl.style.color = 'var(--color-success)';
+      } else if(pctChange < 0){
+        trendEl.textContent = `↓${Math.abs(pctChange)}%`;
+        trendEl.style.color = 'var(--color-pending)';
+      } else {
+        trendEl.textContent = '—';
+        trendEl.style.color = 'var(--color-text-muted)';
+      }
+      trendEl.style.display = 'inline';
+    } else {
+      trendEl.style.display = 'none';
+    }
+  }
+
   if(isAdminOrDemo){
     renderHostelSummary(); renderHostelTrendChart(); renderHostelForecast(); renderHostelUnusualActivity(); renderHostelOnlineUsers(); renderHostelLeaderboard(); setupHostelDragReorder();
     if(!window.hasStaggeredHostelPanelsOnce){
@@ -1640,13 +1665,13 @@ function renderTable(){
   }
   if(!rows.length){ tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--color-text-muted);">No matching records.</td></tr>'; return; }
   tbody.innerHTML = rows.map(s => `
-    <tr data-id="${s.id}" class="${previousRosterStatus[s.id] !== undefined && previousRosterStatus[s.id] !== s.status ? 'row-just-updated' : ''}">
+    <tr data-id="${s.id}" class="${previousRosterStatus[s.id] !== undefined && previousRosterStatus[s.id] !== s.status ? 'row-just-updated' : ''}" style="border-left:3px solid ${s.status==='done' ? 'var(--color-success)' : 'var(--color-pending)'};">
       <td onclick="event.stopPropagation();"><input type="checkbox" class="row-select-checkbox" data-id="${s.id}" ${selectedStudentIds.has(s.id) ? 'checked' : ''}></td>
       <td>${escapeHtml(s.studentName)||'—'}</td>
       <td class="mono" style="font-family:var(--font-mono);">${escapeHtml(s.applicationNo)||'—'}</td>
       <td>${escapeHtml(s.hostelName)||'—'}</td>
       <td>${escapeHtml(s.roomNo)||'—'}</td>
-      <td><span class="status-pill ${s.status}">${s.status==='done'?`<svg width="10" height="10" viewBox="0 0 24 24" style="vertical-align:-1px; margin-right:2px;"><path d="M4 12l6 6L20 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="${previousRosterStatus[s.id] !== undefined && previousRosterStatus[s.id] !== s.status ? 'check-draw-in' : ''}"/></svg>Verified`:'Pending'}</span>${getStatusSymbol(s)}${s.locked?' 🔒':''}${s.notes ? ` <span title="${escapeHtml(s.notes)}">📝</span>` : ''}</td>
+      <td><span class="status-pill ${s.status}">${s.status==='done'?`<svg width="10" height="10" viewBox="0 0 24 24" style="vertical-align:-1px; margin-right:2px;"><path d="M4 12l6 6L20 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="${previousRosterStatus[s.id] !== undefined && previousRosterStatus[s.id] !== s.status ? 'check-draw-in' : ''}"/></svg>Verified`:'Pending'}</span>${getStatusSymbol(s)}${s.locked?' 🔒':''}${s.notes ? ` <span title="${escapeHtml(s.notes)}">📝</span>` : ''}<span class="row-hover-hint">→</span></td>
     </tr>
   `).join('');
   hostel.forEach(s => { previousRosterStatus[s.id] = s.status; });
