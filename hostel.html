@@ -1288,7 +1288,7 @@ function renderHostelSummary(){
   const rows = getHostelSummaryRows();
   const tbody = document.getElementById('summaryTableBody');
   if(!rows.length){
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:16px; color:var(--color-text-muted);">No data yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:16px; color:var(--color-text-muted);"><i class="ti ti-chart-bar-off" style="font-size:24px; display:block; margin:0 auto 6px; opacity:.6;"></i>No data yet.</td></tr>';
   } else {
     const totalDone = rows.reduce((sum, r) => sum + r.done, 0);
     const totalPending = rows.reduce((sum, r) => sum + r.pending, 0);
@@ -1715,7 +1715,7 @@ function renderTable(){
       s.registrationNo.toLowerCase().includes(q) || s.hostelName.toLowerCase().includes(q)
     );
   }
-  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--color-text-muted);">No matching records.</td></tr>'; return; }
+  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--color-text-muted);"><i class="ti ti-search-off" style="font-size:26px; display:block; margin:0 auto 6px; opacity:.6;"></i>No matching records.</td></tr>'; return; }
   tbody.innerHTML = rows.map(s => `
     <tr data-id="${s.id}" class="${previousRosterStatus[s.id] !== undefined && previousRosterStatus[s.id] !== s.status ? 'row-just-updated' : ''}" style="border-left:3px solid ${s.status==='done' ? 'var(--color-success)' : 'var(--color-pending)'};">
       <td onclick="event.stopPropagation();"><input type="checkbox" class="row-select-checkbox" data-id="${s.id}" ${selectedStudentIds.has(s.id) ? 'checked' : ''}></td>
@@ -1771,7 +1771,7 @@ function findMatches(q){
   );
 }
 function renderSuggestions(matches){
-  if(!matches.length){ suggestions.innerHTML = '<div style="font-size:12px; color:var(--color-text-muted); margin-top:8px; display:flex; align-items:center; gap:8px;"><span style="font-size:15px; opacity:.5;">🔍</span> No matches.</div>'; return; }
+  if(!matches.length){ suggestions.innerHTML = '<div style="font-size:12px; color:var(--color-text-muted); margin-top:8px; display:flex; align-items:center; gap:8px;"><i class="ti ti-search-off" style="font-size:16px; opacity:.6;"></i> No matches.</div>'; return; }
   suggestions.innerHTML = matches.slice(0, 10).map((s, i) => {
     const idLine = [s.applicationNo, s.registrationNo, s.machineCode].filter(Boolean).join(' · ');
     return `
@@ -1795,7 +1795,7 @@ searchInput.addEventListener('input', () => {
 function runHostelSearch(){
   const matches = findMatches(searchInput.value);
   if(!matches.length){
-    suggestions.innerHTML = '<div style="font-size:12px; color:var(--color-text-muted); margin-top:8px; display:flex; align-items:center; gap:8px;"><span style="font-size:15px; opacity:.5;">🔍</span> No matching students. Check the App No / Reg No / Machine Code and try again.</div>';
+    suggestions.innerHTML = '<div style="font-size:12px; color:var(--color-text-muted); margin-top:8px; display:flex; align-items:center; gap:8px;"><i class="ti ti-search-off" style="font-size:16px; opacity:.6;"></i> No matching students. Check the App No / Reg No / Machine Code and try again.</div>';
     return;
   }
   if(matches.length === 1) selectStudent(matches[0].id);
