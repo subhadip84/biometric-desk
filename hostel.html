@@ -51,6 +51,8 @@
     background-size:400% 100%; animation:skeletonShimmer 1.4s ease infinite;
   }
   @keyframes skeletonShimmer{ 0%{ background-position:100% 50%; } 100%{ background-position:0 50%; } }
+  @keyframes contentFadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  .content-fade-in{ animation:contentFadeIn .3s ease-out; }
   *{box-sizing:border-box;}
   body{
     margin:0; color:var(--color-text); font-family:var(--font-body); -webkit-font-smoothing:antialiased;
@@ -1129,6 +1131,18 @@ function updateLastRefreshedLabel(){
   el.textContent = text;
 }
 setInterval(updateLastRefreshedLabel, 5000);
+
+new MutationObserver((mutations) => {
+  mutations.forEach(m => {
+    if(!m.target || m.target.classList.contains('content-fade-in')) return;
+    if(m.removedNodes.length === 0 || m.removedNodes.length > 20) return;
+    const hadSkeleton = Array.from(m.removedNodes).some(n => n.nodeType === 1 && n.classList?.contains('skeleton-line'));
+    if(hadSkeleton && m.target.childNodes.length){
+      m.target.classList.add('content-fade-in');
+      setTimeout(() => m.target.classList.remove('content-fade-in'), 350);
+    }
+  });
+}).observe(document.body, { childList: true, subtree: true });
 
 async function loadHostelData(){
   const refreshIcon = document.getElementById('refreshIcon');
