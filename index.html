@@ -493,6 +493,7 @@
           <button class="menu-item" id="manageUsersBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M15.5 14c2.6.3 4.5 2.4 4.5 5"/></svg>Manage Users</button>
           <button class="menu-item" id="resetUserPasswordBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>Reset User Password</button>
           <button class="menu-item" id="composeMessageBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v13H7l-3 3z"/></svg>Compose Message</button>
+          <button class="menu-item" id="dataIntegrityBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>Data Integrity Check</button>
         </div>
 
         <div class="menu-group" id="menuGroupTools">
@@ -2158,6 +2159,60 @@ async function showBackupToDatabaseModal(){
 }
 document.getElementById('backupDbBtn')?.addEventListener('click', showBackupToDatabaseModal);
 
+async function showDataIntegrityModal(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:480px; overflow:hidden; display:flex; flex-direction:column; max-height:80vh;">
+      <h3 style="flex-shrink:0;">Data Integrity Check</h3>
+      <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:10px; flex-shrink:0;">Records marked Verified but not locked — this shouldn't happen through normal use, and usually means a sheet cell was edited directly outside the app.</div>
+      <div id="integrityList" style="overflow-y:auto; flex:1; min-height:0;">
+        <div class="skeleton-line" style="width:80%;"></div><div class="skeleton-line" style="width:60%;"></div>
+      </div>
+      <div class="modal-error" id="integrityError" style="flex-shrink:0;"></div>
+      <button class="btn btn-primary btn-block" id="fixIntegrityBtn" style="display:none; margin-top:10px; flex-shrink:0;">Fix Selected</button>
+      <button class="btn btn-ghost btn-block" id="integrityCloseBtn" style="margin-top:8px; flex-shrink:0;">Close</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const listEl = overlay.querySelector('#integrityList');
+  const errorEl = overlay.querySelector('#integrityError');
+  const fixBtn = overlay.querySelector('#fixIntegrityBtn');
+  overlay.querySelector('#integrityCloseBtn').addEventListener('click', () => overlay.remove());
+
+  try{
+    const data = await runScript('findInconsistentLockStatus');
+    if(!data.ok){ listEl.innerHTML = `<div class="search-hint">${escapeHtml(data.error || 'Could not run the check.')}</div>`; return; }
+    if(!data.records.length){
+      listEl.innerHTML = `<div class="search-hint">No inconsistencies found — every verified record is correctly locked.</div>`;
+      return;
+    }
+    listEl.innerHTML = data.records.map((r, i) => `
+      <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; border:1px solid var(--color-border); border-radius:8px; padding:8px 10px; margin-bottom:6px; cursor:pointer;">
+        <input type="checkbox" class="integrity-checkbox" data-id="${r.id}" checked>
+        <span>${escapeHtml(r.name || '(no name)')} — ${escapeHtml(r.regNo || r.appNo || r.id)}</span>
+      </label>
+    `).join('');
+    fixBtn.style.display = 'block';
+  }catch(err){
+    listEl.innerHTML = `<div class="search-hint">Could not load — ${escapeHtml(err.message)}</div>`;
+  }
+
+  fixBtn.addEventListener('click', () => {
+    const selected = Array.from(overlay.querySelectorAll('.integrity-checkbox:checked')).map(cb => cb.dataset.id);
+    if(!selected.length){ errorEl.textContent = 'Select at least one record.'; return; }
+    showUnlockModal(async (password) => {
+      const data = await runScript('fixInconsistentLockStatus', selected, password, sessionStorage.getItem(USERNAME_KEY) || 'Admin');
+      if(!data.ok) throw new Error(data.error || 'Could not fix these records.');
+      overlay.remove();
+      showToast(`Fixed ${data.fixedCount} record(s).`, 'success');
+      fetchStudents();
+    }, 'Confirm Fix', 'Fix Records');
+  });
+}
+document.getElementById('dataIntegrityBtn')?.addEventListener('click', showDataIntegrityModal);
+
 async function showCustomReportModal(){
   const distinctSites = [...new Set(roster.map(r => r.siteCode).filter(Boolean))].sort();
   const distinctAcademicYears = [...new Set(roster.map(r => r.academicYear).filter(Boolean))].sort().reverse();
@@ -3547,6 +3602,8 @@ function enterApp(){
   if(openSheetBtn) openSheetBtn.style.display = perms.downloadCsv ? 'block' : 'none';
   const lockAllBtn = document.getElementById('lockAllBtn');
   if(lockAllBtn) lockAllBtn.style.display = perms.lockAll ? 'block' : 'none';
+  const dataIntegrityBtn = document.getElementById('dataIntegrityBtn');
+  if(dataIntegrityBtn) dataIntegrityBtn.style.display = (sessionStorage.getItem(ADMIN_KEY) === 'yes') ? 'block' : 'none';
   const siteSummaryPanel = document.getElementById('siteSummaryPanel');
   if(siteSummaryPanel) siteSummaryPanel.style.display = perms.viewSummary ? 'block' : 'none';
   const trendChartPanel = document.getElementById('trendChartPanel');
