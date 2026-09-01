@@ -489,7 +489,6 @@
 
         <div class="menu-group" id="menuGroupAdmin">
           <div class="menu-group-label">Administration</div>
-          <button class="menu-item" id="lockAllBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Lock All Verified</button>
           <button class="menu-item" id="manageUsersBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M15.5 14c2.6.3 4.5 2.4 4.5 5"/></svg>Manage Users</button>
           <button class="menu-item" id="resetUserPasswordBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>Reset User Password</button>
           <button class="menu-item" id="composeMessageBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v13H7l-3 3z"/></svg>Compose Message</button>
@@ -3569,8 +3568,6 @@ function enterApp(){
   if(welcomeMsg) welcomeMsg.textContent = `Welcome, ${sessionStorage.getItem(USERNAME_KEY) || (isAdmin ? 'Admin' : 'Staff')}`;
   const openSheetBtn = document.getElementById('openSheetBtn');
   if(openSheetBtn) openSheetBtn.style.display = perms.downloadCsv ? 'block' : 'none';
-  const lockAllBtn = document.getElementById('lockAllBtn');
-  if(lockAllBtn) lockAllBtn.style.display = perms.lockAll ? 'block' : 'none';
   const dataIntegrityBtn = document.getElementById('dataIntegrityBtn');
   if(dataIntegrityBtn) dataIntegrityBtn.style.display = (sessionStorage.getItem(ADMIN_KEY) === 'yes') ? 'block' : 'none';
   const siteSummaryPanel = document.getElementById('siteSummaryPanel');
@@ -4161,18 +4158,6 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// --- Admin: lock all already-Done records that predate the locking feature ---
-const lockAllBtn = document.getElementById('lockAllBtn');
-if(lockAllBtn){
-  lockAllBtn.addEventListener('click', () => {
-    showUnlockModal(async (password) => {
-      const data = await runScript('adminLockAllDone', password, sessionStorage.getItem(USERNAME_KEY) || 'Admin');
-      if(!data.ok) throw new Error(data.error || 'Lock failed.');
-      await fetchStudents();
-      showToast(`Locked ${data.count} previously-verified record${data.count === 1 ? '' : 's'} that weren't locked yet.`, 'success');
-    }, 'Lock all verified records', 'Lock All');
-  });
-}
 
 // --- Change my own password ---
 function showForcedPasswordChangeModal(userId, currentPassword){
@@ -4491,7 +4476,6 @@ const PERMISSION_CHECKBOX_HTML = `
     <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; padding:4px 0;"><input type="checkbox" class="permCheckbox" value="viewSummary" checked> View School Summary + Chart</label>
     <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; padding:4px 0;"><input type="checkbox" class="permCheckbox" value="downloadCsv" checked> Download Roster (CSV)</label>
     <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; padding:4px 0;"><input type="checkbox" class="permCheckbox" value="unlockRecords" checked> Unlock locked records</label>
-    <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; padding:4px 0;"><input type="checkbox" class="permCheckbox" value="lockAll" checked> Lock All Verified</label>
     <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; padding:4px 0;"><input type="checkbox" class="permCheckbox" value="viewActivityLog" checked> View Activity Log</label>
     <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; padding:4px 0;"><input type="checkbox" class="permCheckbox" value="composeMessage" checked> Compose Message (broadcast)</label>
     <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; padding:4px 0;"><input type="checkbox" class="permCheckbox" value="importStudents" checked> Import New Students</label>
@@ -5925,7 +5909,6 @@ const HELP_FAQ_BY_PERMISSION = {
   resetPasswords: { keywords: ['reset password', 'someone\'s password'], question: 'How do I reset someone\'s password?', answer: 'Welcome menu → Reset User Password → pick their account → enter a new password → confirm with the admin password.' },
   composeMessage: { keywords: ['send message', 'broadcast', 'announcement', 'compose message'], question: 'How do I send a message to staff?', answer: 'Welcome menu → Compose Message → write your message → pick a style → Publish.' },
   viewActivityLog: { keywords: ['activity log', 'recent activity', 'audit'], question: 'How can I see recent activity?', answer: 'Welcome menu → Activity Log shows everyone\'s actions with timestamps.' },
-  lockAll: { keywords: ['lock all'], question: 'How do I lock all verified records at once?', answer: 'Welcome menu → Lock All Verified → confirm with the admin password.' },
   deleteStudent: { keywords: ['delete student', 'remove student'], question: 'How do I delete a student record?', answer: 'Open their detail card → Delete Student → confirm, then enter the admin password.' }
 };
 
