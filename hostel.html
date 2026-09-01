@@ -257,6 +257,7 @@
           <button class="menu-item" id="hostelActivityLogBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>Activity Log</button>
           <button class="menu-item" id="hostelEodSummaryBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>End of Day Summary</button>
           <button class="menu-item" id="hostelHelpStatsBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10m6 10V4m6 16v-7"/></svg>Help Question Stats</button>
+          <button class="menu-item" id="dataIntegrityBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>Data Integrity Check</button>
         </div>
 
         <div class="menu-group" id="menuGroupNav">
@@ -493,7 +494,7 @@ if(isAdminOrDemo){
   document.getElementById('hostelSpotCheckPanel').style.display = 'flex';
   document.getElementById('hostelLeaderboardPanel').style.display = 'block';
   document.getElementById('hostelDuplicateCheckPanel').style.display = 'block';
-  ['hostelActivityLogBtn', 'hostelHelpStatsBtn', 'hostelEodSummaryBtn', 'hostelCustomReportBtn', 'downloadCsvBtn', 'importNewBtn', 'importVerifyBtn'].forEach(id => {
+  ['hostelActivityLogBtn', 'hostelHelpStatsBtn', 'hostelEodSummaryBtn', 'hostelCustomReportBtn', 'downloadCsvBtn', 'importNewBtn', 'importVerifyBtn', 'dataIntegrityBtn'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = 'block';
   });
@@ -2159,6 +2160,60 @@ const HOSTEL_REPORT_FIELDS = [
   { key: 'verifiedBy', label: 'Verified By' },
   { key: 'verifiedAt', label: 'Verified At' }
 ];
+
+async function showDataIntegrityModal(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:480px; overflow:hidden; display:flex; flex-direction:column; max-height:80vh;">
+      <h3 style="flex-shrink:0;">Data Integrity Check</h3>
+      <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:10px; flex-shrink:0;">Records marked verified but not locked — this shouldn't happen through normal use, and usually means a sheet cell was edited directly outside the app.</div>
+      <div id="integrityList" style="overflow-y:auto; flex:1; min-height:0;">
+        <div class="skeleton-line" style="width:80%;"></div><div class="skeleton-line" style="width:60%;"></div>
+      </div>
+      <div class="modal-error" id="integrityError" style="flex-shrink:0;"></div>
+      <button class="btn btn-primary btn-block" id="fixIntegrityBtn" style="display:none; margin-top:10px; flex-shrink:0;">Fix Selected</button>
+      <button class="btn btn-ghost btn-block" id="integrityCloseBtn" style="margin-top:8px; flex-shrink:0;">Close</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const listEl = overlay.querySelector('#integrityList');
+  const errorEl = overlay.querySelector('#integrityError');
+  const fixBtn = overlay.querySelector('#fixIntegrityBtn');
+  overlay.querySelector('#integrityCloseBtn').addEventListener('click', () => overlay.remove());
+
+  try{
+    const data = await runScript('findInconsistentHostelLockStatus');
+    if(!data.ok){ listEl.innerHTML = `<div class="search-hint">${escapeHtml(data.error || 'Could not run the check.')}</div>`; return; }
+    if(!data.records.length){
+      listEl.innerHTML = `<div class="search-hint">No inconsistencies found — every verified record is correctly locked.</div>`;
+      return;
+    }
+    listEl.innerHTML = data.records.map((r, i) => `
+      <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; border:1px solid var(--color-border); border-radius:8px; padding:8px 10px; margin-bottom:6px; cursor:pointer;">
+        <input type="checkbox" class="integrity-checkbox" data-id="${r.id}" checked>
+        <span>${escapeHtml(r.name || '(no name)')} — ${escapeHtml(r.regNo || r.appNo || r.id)}</span>
+      </label>
+    `).join('');
+    fixBtn.style.display = 'block';
+  }catch(err){
+    listEl.innerHTML = `<div class="search-hint">Could not load — ${escapeHtml(err.message)}</div>`;
+  }
+
+  fixBtn.addEventListener('click', () => {
+    const selected = Array.from(overlay.querySelectorAll('.integrity-checkbox:checked')).map(cb => cb.dataset.id);
+    if(!selected.length){ errorEl.textContent = 'Select at least one record.'; return; }
+    showUnlockModal(async (password) => {
+      const data = await runScript('fixInconsistentHostelLockStatus', selected, password, sessionStorage.getItem(USERNAME_KEY) || 'Admin');
+      if(!data.ok) throw new Error(data.error || 'Could not fix these records.');
+      overlay.remove();
+      showToast(`Fixed ${data.fixedCount} record(s).`, 'success');
+      loadHostelData();
+    }, 'Confirm Fix', 'Fix Records');
+  });
+}
+document.getElementById('dataIntegrityBtn')?.addEventListener('click', showDataIntegrityModal);
 
 async function showCustomReportModal(){
   const distinctHostels = [...new Set(hostel.map(s => s.hostelName).filter(Boolean))].sort();
