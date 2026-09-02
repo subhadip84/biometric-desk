@@ -635,8 +635,7 @@ function showChangePasswordModal(){
     confirmBtn.disabled = true;
     confirmBtn.textContent = 'Saving…';
     try{
-      const userId = sessionStorage.getItem(USERID_KEY);
-      const data = await runScript('changeOwnPassword', userId, oldInput.value, newInput.value);
+      const data = await runScript('changeOwnPassword', sessionStorage.getItem(SESSION_TOKEN_KEY), oldInput.value, newInput.value);
       if(!data.ok) throw new Error(data.error || 'Could not change password.');
       close();
       showToast('Password changed successfully.', 'success');
@@ -2690,7 +2689,7 @@ function renderDetail(s){
         const confirmed = await showConfirmModal(`Permanently delete ${s.studentName || 'this student'}? This removes the row from the sheet entirely and cannot be undone.`, 'Confirm Deletion');
         if(!confirmed) return;
         showUnlockModal(async (password) => {
-          const data = await runScript('deleteHostelStudent', s.id, password, sessionStorage.getItem(USERNAME_KEY) || 'Admin', sessionStorage.getItem(USERID_KEY));
+          const data = await runScript('deleteHostelStudent', s.id, password, sessionStorage.getItem(SESSION_TOKEN_KEY));
           if(!data.ok) throw new Error(data.error || 'Delete failed.');
           detailArea.innerHTML = `<div class="empty-state"><div style="font-family:var(--font-display); font-size:16px; color:var(--color-heading); margin-bottom:6px;">Student deleted</div><div>Search for another hosteller to view details.</div></div>`;
           await loadHostelData();
@@ -2703,7 +2702,7 @@ function renderDetail(s){
   if(locked && isAdminOrDemo){
     detailArea.querySelector('#unlockHostelBtn').addEventListener('click', () => {
       showUnlockModal(async (password) => {
-        const data = await runScript('adminUnlockHostel', s.id, password, sessionStorage.getItem(USERNAME_KEY) || 'Admin');
+        const data = await runScript('adminUnlockHostel', s.id, password, sessionStorage.getItem(SESSION_TOKEN_KEY));
         if(!data.ok) throw new Error(data.error || 'Unlock failed.');
         s.locked = false;
         renderDetail(s);
@@ -3131,8 +3130,7 @@ function showHostelImportModal(kind){
     fileInput.disabled = true; pwdInput.disabled = true;
 
     try{
-      const actor = sessionStorage.getItem(USERNAME_KEY) || 'Admin';
-      const data = await runScriptWithProgress(fnName, [parsedHeaders, parsedRows, pwdInput.value, actor], (pct, uploadDone) => {
+      const data = await runScriptWithProgress(fnName, [parsedHeaders, parsedRows, pwdInput.value, sessionStorage.getItem(SESSION_TOKEN_KEY)], (pct, uploadDone) => {
         submitProgressBar.style.width = pct + '%';
         submitProgressLabel.textContent = uploadDone ? 'Processing…' : `Uploading… ${pct}%`;
       });
