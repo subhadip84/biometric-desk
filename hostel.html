@@ -9,6 +9,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12203A">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bio Desk">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.46.0/tabler-icons.min.css">
 <style>
@@ -465,6 +471,7 @@ const DEMO_KEY = 'bioDeskIsDemo';
 const VIEWER_KEY = 'bioDeskIsViewer';
 const HOSTELLER_ONLY_KEY = 'bioDeskIsHostellerOnly';
 const USERID_KEY = 'bioDeskUserId';
+const SESSION_TOKEN_KEY = 'bioDeskSessionToken';
 const USERNAME_KEY = 'bioDeskUserName';
 const LOGIN_TIME_KEY = 'bioDeskLoginTime';
 const PERMISSIONS_KEY = 'bioDeskPermissions';
@@ -661,12 +668,14 @@ function logout(reason, successMessage){
     runScript('logSessionEnd', actorName, durationText, currentUserId).catch(() => {});
   }
   stopHeartbeat();
+  runScript('logoutSession', sessionStorage.getItem(SESSION_TOKEN_KEY)).catch(() => {});
 
   sessionStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(ADMIN_KEY);
   sessionStorage.removeItem(DEMO_KEY);
   sessionStorage.removeItem(HOSTELLER_ONLY_KEY);
   sessionStorage.removeItem(USERID_KEY);
+  sessionStorage.removeItem(SESSION_TOKEN_KEY);
   sessionStorage.removeItem(USERNAME_KEY);
   sessionStorage.removeItem(PERMISSIONS_KEY);
   sessionStorage.removeItem('bioDeskLoginTime');
@@ -1693,8 +1702,7 @@ async function executeBulkStatusChange(status){
   markBtn.disabled = true;
   markBtn.textContent = 'Working…';
   try{
-    const actorUserId = sessionStorage.getItem(USERID_KEY);
-    const data = await runScript('bulkUpdateHostelStatus', ids, status, actorUserId);
+    const data = await runScript('bulkUpdateHostelStatus', ids, status, sessionStorage.getItem(SESSION_TOKEN_KEY));
     if(!data.ok){ showToast(data.error || 'Bulk update failed.', 'error'); return; }
     let msg = `${data.updatedCount} student(s) updated.`;
     if(data.skippedLocked) msg += ` ${data.skippedLocked} locked record(s) skipped.`;
@@ -2709,8 +2717,7 @@ function renderDetail(s){
     detailArea.querySelectorAll('input[name="face-status"]').forEach(input => {
       input.addEventListener('change', async (e) => {
         try{
-          const currentUserId = sessionStorage.getItem(USERID_KEY) || 'unknown';
-          const data = await runScript('updateHostelStatus', s.id, e.target.value, currentUserId);
+          const data = await runScript('updateHostelStatus', s.id, e.target.value, sessionStorage.getItem(SESSION_TOKEN_KEY));
           if(!data.ok) throw new Error(data.error || 'Update failed.');
           await loadHostelData(); // refetch so verifiedBy/firstVerifiedBy/timestamps are current, not just status/locked
           const freshStudent = hostel.find(x => x.id === s.id);
@@ -3454,8 +3461,7 @@ if(voiceCommandBtn){
           'Confirm Voice Command'
         );
         if(!confirmed) return;
-        const currentUserId = sessionStorage.getItem(USERID_KEY) || 'unknown';
-        const data = await runScript('updateHostelStatus', student.id, targetStatus, currentUserId);
+        const data = await runScript('updateHostelStatus', student.id, targetStatus, sessionStorage.getItem(SESSION_TOKEN_KEY));
         if(!data.ok) throw new Error(data.error || 'Update failed.');
         await loadHostelData();
         if(targetStatus === 'done' && undoWindowEnabled){
@@ -3569,5 +3575,12 @@ document.addEventListener('visibilitychange', () => {
 startAutoRefresh();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* installability is a bonus, not critical - fail silently */ });
+  });
+}
+</script>
 </body>
 </html>
