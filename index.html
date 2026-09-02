@@ -3830,8 +3830,7 @@ function logout(reason, successMessage){
     const seconds = totalSeconds % 60;
     const durationText = hours > 0 ? `${hours}h ${minutes}m` : (minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`);
     const actorName = sessionStorage.getItem(USERNAME_KEY) || 'unknown';
-    const currentUserId = sessionStorage.getItem(USERID_KEY);
-    runScript('logSessionEnd', actorName, durationText, currentUserId).catch(() => {});
+    runScript('logSessionEnd', actorName, durationText, sessionStorage.getItem(SESSION_TOKEN_KEY)).catch(() => {});
   }
   stopHeartbeat();
   runScript('logoutSession', sessionStorage.getItem(SESSION_TOKEN_KEY)).catch(() => {});
@@ -3931,10 +3930,9 @@ let heartbeatTimer = null;
 function startHeartbeat(){
   stopHeartbeat();
   const send = () => {
-    const currentUserId = sessionStorage.getItem(USERID_KEY);
-    const actorName = sessionStorage.getItem(USERNAME_KEY) || 'unknown';
-    if(!currentUserId) return;
-    runScript('recordHeartbeat', currentUserId, actorName).catch(() => {});
+    const token = sessionStorage.getItem(SESSION_TOKEN_KEY);
+    if(!token) return;
+    runScript('recordHeartbeat', token).catch(() => {});
   };
   send(); // fire one immediately, don't wait for the first interval
   heartbeatTimer = setInterval(send, HEARTBEAT_INTERVAL_MS);
