@@ -2699,7 +2699,7 @@ function renderDetail(r){
         const confirmed = await showConfirmModal(`Permanently delete ${r.name || 'this student'}? This removes the row from the sheet entirely and cannot be undone.`, 'Confirm Deletion');
         if(!confirmed) return;
         showUnlockModal(async (password) => {
-          const data = await runScript('deleteStudent', r.id, password, sessionStorage.getItem(USERNAME_KEY) || 'Admin', sessionStorage.getItem(USERID_KEY));
+          const data = await runScript('deleteStudent', r.id, password, sessionStorage.getItem(SESSION_TOKEN_KEY));
           if(!data.ok) throw new Error(data.error || 'Delete failed');
           detailArea.innerHTML = `
             <div class="empty-state">
@@ -2724,7 +2724,7 @@ function renderDetail(r){
     if(canUnlock){
       document.getElementById('unlockBtn').addEventListener('click', () => {
         showUnlockModal(async (password) => {
-          const data = await runScript('adminUnlock', r.id, password, sessionStorage.getItem(USERNAME_KEY) || 'Admin');
+          const data = await runScript('adminUnlock', r.id, password, sessionStorage.getItem(SESSION_TOKEN_KEY));
           if(!data.ok) throw new Error(data.error || 'Unlock failed');
           r.locked = false;
           renderDetail(r);
@@ -4207,7 +4207,7 @@ function showForcedPasswordChangeModal(userId, currentPassword){
     confirmBtn.disabled = true;
     confirmBtn.textContent = 'Saving…';
     try{
-      const data = await runScript('changeOwnPassword', userId, currentPassword, newInput.value);
+      const data = await runScript('changeOwnPassword', sessionStorage.getItem(SESSION_TOKEN_KEY), currentPassword, newInput.value);
       if(!data.ok) throw new Error(data.error || 'Could not set password.');
       overlay.remove();
       if(sessionStorage.getItem(HOSTELLER_ONLY_KEY) === 'yes'){
@@ -4269,8 +4269,7 @@ function showChangePasswordModal(){
     confirmBtn.disabled = true;
     confirmBtn.textContent = 'Saving…';
     try{
-      const userId = sessionStorage.getItem(USERID_KEY);
-      const data = await runScript('changeOwnPassword', userId, oldInput.value, newInput.value);
+      const data = await runScript('changeOwnPassword', sessionStorage.getItem(SESSION_TOKEN_KEY), oldInput.value, newInput.value);
       if(!data.ok) throw new Error(data.error || 'Could not change password.');
       close();
       showToast('Password changed successfully.', 'success');
@@ -4355,8 +4354,7 @@ function showResetUserPasswordModal(){
     capConfirmBtn.disabled = true;
     capConfirmBtn.textContent = 'Saving…';
     try{
-      const actor = sessionStorage.getItem(USERNAME_KEY) || 'Admin';
-      const data = await runScript('changeAdminPassword', capCurrentInput.value, capNewInput.value, actor);
+      const data = await runScript('changeAdminPassword', capCurrentInput.value, capNewInput.value, sessionStorage.getItem(SESSION_TOKEN_KEY));
       if(!data.ok) throw new Error(data.error || 'Could not change admin password.');
       close();
       showAlertModal('The master admin password has been changed. Make sure to share the new password with anyone who needs it for admin actions.', 'Admin Password Changed');
@@ -4378,7 +4376,7 @@ function showResetUserPasswordModal(){
     confirmBtn.disabled = true;
     confirmBtn.textContent = 'Saving…';
     try{
-      const data = await runScript('adminResetPassword', selectEl.value, newInput.value, adminInput.value);
+      const data = await runScript('adminResetPassword', selectEl.value, newInput.value, adminInput.value, sessionStorage.getItem(SESSION_TOKEN_KEY));
       if(!data.ok) throw new Error(data.error || 'Could not reset password.');
       close();
       showToast(`Password reset for "${selectEl.value}".`, 'success');
@@ -4450,7 +4448,7 @@ function showManageUsersModal(){
           const confirmed = await showConfirmModal(`Delete user "${targetId}"? This cannot be undone.`, 'Confirm Deletion');
           if(!confirmed) return;
           showUnlockModal(async (password) => {
-            const data2 = await runScript('deleteUser', targetId, password, sessionStorage.getItem(USERNAME_KEY) || 'Admin', sessionStorage.getItem(USERID_KEY));
+            const data2 = await runScript('deleteUser', targetId, password, sessionStorage.getItem(SESSION_TOKEN_KEY));
             if(!data2.ok) throw new Error(data2.error || 'Delete failed.');
             await loadUserList();
             showToast(`User "${targetId}" deleted.`, 'success');
@@ -4696,7 +4694,6 @@ function showAddUserModal(onSaved){
       try{
         const permissions = {};
         overlay.querySelectorAll('.permCheckbox').forEach(box => { permissions[box.value] = box.checked; });
-        const actor = sessionStorage.getItem(USERNAME_KEY) || 'Admin';
         const data = await runScript(
           'createUser',
           isAutoUserId ? '' : userIdInput.value.trim(),
@@ -4704,7 +4701,7 @@ function showAddUserModal(onSaved){
           roleSelect.value,
           adminPassword,
           nameInput.value.trim(),
-          actor,
+          sessionStorage.getItem(SESSION_TOKEN_KEY),
           permissions,
           false,
           mobileInput.value.trim(),
@@ -4857,7 +4854,6 @@ function showEditUserModal(user, onSaved){
       try{
         const permissions = {};
         overlay.querySelectorAll('.permCheckbox').forEach(box => { permissions[box.value] = box.checked; });
-        const actor = sessionStorage.getItem(USERNAME_KEY) || 'Admin';
         const data = await runScript(
           'updateUserDetails',
           user.userId,
@@ -4865,7 +4861,7 @@ function showEditUserModal(user, onSaved){
           roleSelect.value,
           permissions,
           adminPassword,
-          actor,
+          sessionStorage.getItem(SESSION_TOKEN_KEY),
           mobileInput.value.trim(),
           emailInput.value.trim(),
           schoolSelect.value
@@ -5114,7 +5110,7 @@ function showComposeMessageModal(){
         const confirmed = await showConfirmModal('Delete this message? Staff will no longer see it.', 'Confirm Deletion');
         if(!confirmed) return;
         try{
-          const data = await runScript('deleteAnnouncement', btn.dataset.id, adminPasswordInput.value, sessionStorage.getItem(USERNAME_KEY) || 'Admin');
+          const data = await runScript('deleteAnnouncement', btn.dataset.id, adminPasswordInput.value, sessionStorage.getItem(SESSION_TOKEN_KEY));
           if(!data.ok) throw new Error(data.error || 'Could not delete message.');
           if(editingId === btn.dataset.id) exitEditMode();
           adminPasswordInput.value = '';
@@ -5144,10 +5140,9 @@ function showComposeMessageModal(){
       const selectedStyle = overlay.querySelector('input[name="cmStyle"]:checked').value;
       let data;
       if(wasEditing){
-        data = await runScript('updateAnnouncement', editingId, textArea.value.trim(), adminPasswordInput.value, selectedStyle, sessionStorage.getItem(USERNAME_KEY) || 'Admin');
+        data = await runScript('updateAnnouncement', editingId, textArea.value.trim(), adminPasswordInput.value, selectedStyle, sessionStorage.getItem(SESSION_TOKEN_KEY));
       } else {
-        const publishedBy = sessionStorage.getItem(USERNAME_KEY) || 'Admin';
-        data = await runScript('publishAnnouncement', textArea.value.trim(), adminPasswordInput.value, publishedBy, selectedStyle);
+        data = await runScript('publishAnnouncement', textArea.value.trim(), adminPasswordInput.value, sessionStorage.getItem(SESSION_TOKEN_KEY), selectedStyle);
       }
       if(!data.ok) throw new Error(data.error || 'Could not save message.');
       await fetchAnnouncements();
@@ -5602,7 +5597,7 @@ function showImportStudentsModal(){
     submitProgressBar.style.width = '0%';
     submitProgressLabel.textContent = 'Uploading… 0%';
     try{
-      const data = await runScriptWithProgress('importNewStudents', [parsedHeaders, parsedRows, adminPasswordInput.value, sessionStorage.getItem(USERNAME_KEY) || 'Admin'], (pct, uploadDone) => {
+      const data = await runScriptWithProgress('importNewStudents', [parsedHeaders, parsedRows, adminPasswordInput.value, sessionStorage.getItem(SESSION_TOKEN_KEY)], (pct, uploadDone) => {
         submitProgressBar.style.width = pct + '%';
         submitProgressLabel.textContent = uploadDone ? 'Processing…' : `Uploading… ${pct}%`;
       });
@@ -5815,8 +5810,7 @@ function showImportVerificationModal(){
     submitProgressBar.style.width = '0%';
     submitProgressLabel.textContent = 'Uploading… 0%';
     try{
-      const actor = sessionStorage.getItem(USERNAME_KEY) || 'Admin';
-      const data = await runScriptWithProgress('importVerificationUpdates', [parsedHeaders, parsedRows, adminPasswordInput.value, actor], (pct, uploadDone) => {
+      const data = await runScriptWithProgress('importVerificationUpdates', [parsedHeaders, parsedRows, adminPasswordInput.value, sessionStorage.getItem(SESSION_TOKEN_KEY)], (pct, uploadDone) => {
         submitProgressBar.style.width = pct + '%';
         submitProgressLabel.textContent = uploadDone ? 'Processing…' : `Uploading… ${pct}%`;
       });
