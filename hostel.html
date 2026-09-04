@@ -1058,10 +1058,8 @@ function showUndoToast(student){
 
   undoLink.addEventListener('click', async () => {
     clearInterval(countdownTimer);
-    const actorName = sessionStorage.getItem(USERNAME_KEY) || 'unknown';
-    const actorUserId = sessionStorage.getItem(USERID_KEY);
     try{
-      const data = await runScript('undoRecentHostelVerification', student.id, actorName, actorUserId);
+      const data = await runScript('undoRecentHostelVerification', student.id, sessionStorage.getItem(SESSION_TOKEN_KEY));
       if(!data.ok) throw new Error(data.error || 'Could not undo.');
       dismiss();
       showToast('Verification undone.', 'success');
@@ -2211,7 +2209,7 @@ async function showDataIntegrityModal(){
     const selected = Array.from(overlay.querySelectorAll('.integrity-checkbox:checked')).map(cb => cb.dataset.id);
     if(!selected.length){ errorEl.textContent = 'Select at least one record.'; return; }
     showUnlockModal(async (password) => {
-      const data = await runScript('fixInconsistentHostelLockStatus', selected, password, sessionStorage.getItem(USERNAME_KEY) || 'Admin');
+      const data = await runScript('fixInconsistentHostelLockStatus', selected, password, sessionStorage.getItem(SESSION_TOKEN_KEY));
       if(!data.ok) throw new Error(data.error || 'Could not fix these records.');
       overlay.remove();
       showToast(`Fixed ${data.fixedCount} record(s).`, 'success');
@@ -2366,8 +2364,7 @@ async function showCustomReportModal(){
     if(saveCheckbox.checked){
       const templateName = nameInput.value.trim();
       if(!templateName){ errorEl.textContent = 'Enter a name to save this report.'; return; }
-      const actor = sessionStorage.getItem(USERNAME_KEY) || 'unknown';
-      const saveResult = await runScript('saveReportTemplate', templateName, config, actor);
+      const saveResult = await runScript('saveReportTemplate', templateName, config, sessionStorage.getItem(SESSION_TOKEN_KEY));
       if(!saveResult.ok){ errorEl.textContent = saveResult.error || 'Could not save this report.'; return; }
     }
 
@@ -2663,8 +2660,7 @@ function renderDetail(s){
       saveNoteBtn.disabled = true;
       saveNoteBtn.textContent = 'Saving…';
       try{
-        const actorUserId = sessionStorage.getItem(USERID_KEY);
-        const data = await runScript('updateHostelStudentNote', s.id, noteText, actorUserId);
+        const data = await runScript('updateHostelStudentNote', s.id, noteText, sessionStorage.getItem(SESSION_TOKEN_KEY));
         if(!data.ok){ showToast(data.error || 'Could not save note.', 'error'); return; }
         s.notes = noteText;
         const hint = detailArea.querySelector('#noteSavedHint');
