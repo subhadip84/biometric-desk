@@ -307,7 +307,13 @@
     max-height:88vh; overflow-y:auto;
     animation: modalScaleIn .2s cubic-bezier(.2,.9,.3,1.1);
     position:relative;
+    scrollbar-width:thin;
+    scrollbar-color:var(--color-border) transparent;
   }
+  .modal-box::-webkit-scrollbar{ width:6px; }
+  .modal-box::-webkit-scrollbar-track{ background:transparent; border-radius:10px; }
+  .modal-box::-webkit-scrollbar-thumb{ background:var(--color-border); border-radius:10px; }
+  .modal-box::-webkit-scrollbar-thumb:hover{ background:var(--color-text-muted); }
   .modal-close-x{
     position:absolute; top:14px; right:14px; width:28px; height:28px; border-radius:50%;
     background:transparent; border:none; color:var(--color-text-muted); cursor:pointer;
@@ -2228,7 +2234,7 @@ async function showCustomReportModal(){
       <div style="overflow-y:auto; flex:1; min-height:0;">
 
         <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px;">Load a saved report</div>
-        <select id="crLoadTemplate" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:14px;">
+        <select id="crLoadTemplate" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:14px; box-sizing:border-box; appearance:none; -webkit-appearance:none; -moz-appearance:none; background:#fff url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23657085' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E&quot;) no-repeat right 12px center; background-size:16px;">
           <option value="">— Start a new report —</option>
         </select>
 
