@@ -4291,7 +4291,7 @@ function showResetUserPasswordModal(){
   overlay.innerHTML = `
     <div class="modal-box">
       <h3>Reset User Password</h3>
-      <select id="rpUserSelect" style="width:100%; padding:11px 14px; border-radius:8px; border:1px solid var(--color-border); font-size:14px; font-family:var(--font-body); margin-bottom:10px;"></select>
+      <select id="rpUserSelect" style="width:100%; padding:11px 14px; border-radius:8px; border:1px solid var(--color-border); font-size:14px; font-family:var(--font-body); margin-bottom:10px; appearance:none; -webkit-appearance:none; -moz-appearance:none; background:#fff url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23657085' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E&quot;) no-repeat right 12px center; background-size:16px;"></select>
       <input type="password" id="rpNewPassword" placeholder="New password (min. 4 characters)" autocomplete="off">
       <input type="password" id="rpAdminPassword" placeholder="Admin password (to authorize)" autocomplete="off" style="margin-top:8px;">
       <div class="modal-error" id="rpError" style="margin-top:8px;"></div>
