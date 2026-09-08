@@ -2081,6 +2081,7 @@ if(hostelHelpStatsBtn){
 
 function showConfirmModal(message, title){
   return new Promise(resolve => {
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.innerHTML = `
@@ -2099,6 +2100,7 @@ function showConfirmModal(message, title){
     function close(result){ overlay.remove(); resolve(result); }
     yesBtn.addEventListener('click', () => close(true));
     noBtn.addEventListener('click', () => close(false));
+    setTimeout(() => { if (document.body.contains(yesBtn)) yesBtn.focus(); }, 50);
   });
 }
 
