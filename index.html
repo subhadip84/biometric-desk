@@ -3956,6 +3956,7 @@ function logout(reason, successMessage){
   appShell.style.display = 'none';
   loginScreen.style.display = 'flex';
   document.getElementById('loginPassword').value = '';
+  document.getElementById('loginUserId').value = '';
   generateCaptcha();
   loginSubmitBtn.disabled = false;
   loginSubmitBtn.textContent = 'Sign In';
