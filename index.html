@@ -1990,6 +1990,80 @@ function showUnlockModal(onSubmit, title, confirmLabel){
   input.addEventListener('keydown', (e) => { if(e.key === 'Enter') submit(); });
 }
 
+function showEditStudentModal(student, onSave){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:420px;">
+      <h3>Edit Student Details</h3>
+      <div style="font-size:12.5px; color:var(--color-text-muted); margin-bottom:14px;">Changes are logged in the Activity Log with the previous values.</div>
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Name</label>
+      <input type="text" id="esName" value="${escapeHtml(student.name || '')}" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Application/Roll No</label>
+      <input type="text" id="esAppNo" value="${escapeHtml(student.appNo || '')}" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Registration Number</label>
+      <input type="text" id="esRegNo" value="${escapeHtml(student.regNo || '')}" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Machine Code</label>
+      <input type="text" id="esMachineCode" value="${escapeHtml(student.machineCode || '')}" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Site Code</label>
+      <input type="text" id="esSiteCode" value="${escapeHtml(student.siteCode || '')}" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Student Type</label>
+      <input type="text" id="esStudentType" value="${escapeHtml(student.studentType || '')}" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:14px; box-sizing:border-box;">
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Admin password</label>
+      <input type="password" id="esAdminPassword" autocomplete="off" placeholder="Required to save changes" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <div class="modal-error" id="esError"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="esCancelBtn">Cancel</button>
+        <button class="btn btn-primary" id="esSaveBtn">Save Changes</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const errorEl = overlay.querySelector('#esError');
+  const saveBtn = overlay.querySelector('#esSaveBtn');
+  const cancelBtn = overlay.querySelector('#esCancelBtn');
+  const nameInput = overlay.querySelector('#esName');
+
+  nameInput.focus();
+
+  function close(){ overlay.remove(); }
+
+  async function submit(){
+    const fields = {
+      name: overlay.querySelector('#esName').value.trim(),
+      appNo: overlay.querySelector('#esAppNo').value.trim(),
+      regNo: overlay.querySelector('#esRegNo').value.trim(),
+      machineCode: overlay.querySelector('#esMachineCode').value.trim(),
+      siteCode: overlay.querySelector('#esSiteCode').value.trim(),
+      studentType: overlay.querySelector('#esStudentType').value.trim()
+    };
+    const adminPassword = overlay.querySelector('#esAdminPassword').value;
+    if(!adminPassword){
+      errorEl.textContent = 'Enter the admin password to save changes.';
+      return;
+    }
+    if(!fields.name){
+      errorEl.textContent = 'Name cannot be blank.';
+      return;
+    }
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    errorEl.textContent = '';
+    try{
+      await onSave(fields, adminPassword);
+      close();
+    }catch(err){
+      errorEl.textContent = err.message || 'Could not save changes.';
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Changes';
+    }
+  }
+
+  cancelBtn.addEventListener('click', close);
+  saveBtn.addEventListener('click', submit);
+}
+
 function formatVerifierLabel(rawName, isAdmin){
   if(!rawName) return '';
   const cleanName = rawName.replace(' [Admin]', '').trim();
@@ -2600,6 +2674,7 @@ function renderDetail(r){
   try{ perms = JSON.parse(sessionStorage.getItem(PERMISSIONS_KEY) || '{}'); }catch(e){ perms = {}; }
   const canUnlock = !!perms.unlockRecords;
   const canDelete = !!perms.deleteStudent;
+  const canEdit = sessionStorage.getItem(ADMIN_KEY) === 'yes' && sessionStorage.getItem(DEMO_KEY) !== 'yes';
   detailArea.innerHTML = `
     <div class="verify-card">
       <div class="vc-head">
@@ -2655,6 +2730,11 @@ function renderDetail(r){
           </div>
           `}
         </div>
+        ${canEdit ? `
+          <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--color-border);">
+            <button class="btn btn-ghost" id="editStudentBtn">Edit Student Details</button>
+          </div>
+        ` : ''}
         ${canDelete ? `
           <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--color-border);">
             <button class="btn btn-ghost" id="deleteStudentBtn" style="color:var(--color-pending); border-color:var(--color-pending-soft);">Delete Student</button>
@@ -2699,6 +2779,26 @@ function renderDetail(r){
         saveNoteBtn.textContent = originalText;
       }
     });
+  }
+
+  if(canEdit){
+    const editStudentBtn = document.getElementById('editStudentBtn');
+    if(editStudentBtn){
+      editStudentBtn.addEventListener('click', () => {
+        showEditStudentModal(r, async (fields, adminPassword) => {
+          const data = await runScript('updateStudentDetails', r.id, fields, adminPassword, sessionStorage.getItem(SESSION_TOKEN_KEY));
+          if(!data.ok) throw new Error(data.error || 'Could not save changes.');
+          r.name = fields.name;
+          r.appNo = fields.appNo;
+          r.regNo = fields.regNo;
+          r.machineCode = fields.machineCode;
+          r.siteCode = fields.siteCode;
+          r.studentType = fields.studentType;
+          showToast(data.changed === false ? 'No changes to save.' : 'Student details updated.', 'success');
+          renderDetail(r);
+        });
+      });
+    }
   }
 
   if(canDelete){
