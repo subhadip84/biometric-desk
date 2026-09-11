@@ -366,10 +366,13 @@
       <div class="panel" style="margin-top:20px;">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
           <h2 style="margin:0;">Full hostel roster</h2>
-          <div style="display:flex; gap:8px;">
+          <div style="display:flex; gap:8px; align-items:center;">
             <div class="chip active" data-filter="all" style="padding:6px 13px; border-radius:20px; border:1px solid var(--color-border); font-size:12px; font-weight:600; cursor:pointer; background:#fff; color:var(--color-text-muted);">All</div>
             <div class="chip" data-filter="done" style="padding:6px 13px; border-radius:20px; border:1px solid var(--color-border); font-size:12px; font-weight:600; cursor:pointer; background:#fff; color:var(--color-text-muted);">Verified</div>
             <div class="chip" data-filter="pending" style="padding:6px 13px; border-radius:20px; border:1px solid var(--color-border); font-size:12px; font-weight:600; cursor:pointer; background:#fff; color:var(--color-text-muted);">Pending</div>
+            <label style="display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--color-text-muted); margin-left:6px; cursor:pointer; user-select:none;">
+              <input type="checkbox" id="showInactiveToggle" style="cursor:pointer;"> Show inactive
+            </label>
           </div>
         </div>
         <input type="text" id="tableQuickFilter" placeholder="🔍 Filter visible rows by name, App No, Reg No, or Hostel…" style="width:100%; padding:8px 14px; border-radius:20px; border:1px solid var(--color-border); font-size:12.5px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
@@ -1094,6 +1097,7 @@ let previousRosterStatus = {};
 let selectedStudentIds = new Set();
 let currentlyDisplayedStudent = null;
 let selectedAcademicYear = 'all';
+let showInactive = false;
 let hasInitializedAcademicYearFilter = false;
 
 function getCurrentAcademicYear(){
@@ -1103,8 +1107,10 @@ function getCurrentAcademicYear(){
 }
 
 function getFilteredHostel(){
-  if(selectedAcademicYear === 'all') return hostel;
-  return hostel.filter(s => s.academicYear === selectedAcademicYear);
+  let rows = hostel;
+  if(!showInactive) rows = rows.filter(s => s.active !== false);
+  if(selectedAcademicYear === 'all') return rows;
+  return rows.filter(s => s.academicYear === selectedAcademicYear);
 }
 
 function populateAcademicYearFilter(){
@@ -1790,6 +1796,13 @@ document.querySelectorAll('.chip').forEach(chip => {
     renderTable();
   });
 });
+
+document.getElementById('showInactiveToggle')?.addEventListener('change', (e) => {
+  showInactive = e.target.checked;
+  renderStats();
+  renderTable();
+});
+
 document.getElementById('tableQuickFilter')?.addEventListener('input', renderTable);
 
 const searchInput = document.getElementById('searchInput');
@@ -2676,7 +2689,7 @@ function renderDetail(s){
         </div>
         <div class="vc-head-text">
           <div class="name">${escapeHtml(s.studentName)||'(no name)'}</div>
-          <div class="status-line">${isDone ? 'Face capture complete' : 'Awaiting face capture'}${statusSymbol}${locked ? ' · Locked' : ''}</div>
+          <div class="status-line">${isDone ? 'Face capture complete' : 'Awaiting face capture'}${statusSymbol}${locked ? ' · Locked' : ''}${s.active === false ? ' · Inactive' : ''}</div>
         </div>
         <button type="button" id="qrDetailBtn" title="Show QR code for quick lookup" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center; margin-left:auto;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="17.5" x2="21" y2="17.5"/></svg></button>
         <button type="button" id="printDetailBtn" title="Print this record" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
@@ -2693,6 +2706,7 @@ function renderDetail(s){
           <div class="detail-item"><div class="lab">Hostel Name</div><div class="val">${escapeHtml(s.hostelName)||'—'}</div></div>
           <div class="detail-item"><div class="lab">Room No</div><div class="val">${escapeHtml(s.roomNo)||'—'}</div></div>
           <div class="detail-item"><div class="lab">Food Coupon</div><div class="val">${escapeHtml(s.foodCoupon)||'—'}</div></div>
+          <div class="detail-item"><div class="lab">Record status</div><div class="val">${s.active === false ? 'Inactive' : 'Active'}</div></div>
         </div>
         ${(s.firstVerifiedBy || s.verifiedBy) ? `
           <div style="margin-top:16px; border:1px solid var(--color-border); border-radius:10px; overflow:hidden;">
@@ -2738,6 +2752,11 @@ function renderDetail(s){
         ${(isAdminOrDemo && !isDemo) ? `
           <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--color-border);">
             <button class="btn btn-ghost" id="editHostelStudentBtn">Edit Student Details</button>
+          </div>
+        ` : ''}
+        ${(isAdminOrDemo && !isDemo) ? `
+          <div style="margin-top:12px;">
+            <button class="btn btn-ghost" id="toggleHostelActiveBtn">${s.active === false ? 'Mark Active' : 'Mark Inactive'}</button>
           </div>
         ` : ''}
         ${(isAdminOrDemo && !isDemo) ? `
@@ -2806,6 +2825,33 @@ function renderDetail(s){
           showToast(data.changed === false ? 'No changes to save.' : 'Student details updated.', 'success');
           renderDetail(s);
         });
+      });
+    }
+  }
+
+  if(isAdminOrDemo && !isDemo){
+    const toggleActiveBtn = detailArea.querySelector('#toggleHostelActiveBtn');
+    if(toggleActiveBtn){
+      toggleActiveBtn.addEventListener('click', async () => {
+        const makingInactive = s.active !== false;
+        if(makingInactive){
+          const confirmed = await showConfirmModal(`Mark ${s.studentName || 'this student'} as inactive? They\u2019ll be hidden from the default roster view and excluded from pending counts until marked active again.`, 'Confirm');
+          if(!confirmed) return;
+        }
+        const originalText = toggleActiveBtn.textContent;
+        toggleActiveBtn.disabled = true;
+        toggleActiveBtn.textContent = 'Saving…';
+        try{
+          const data = await runScript('setHostelStudentActiveStatus', s.id, !makingInactive, sessionStorage.getItem(SESSION_TOKEN_KEY));
+          if(!data.ok) throw new Error(data.error || 'Could not update status.');
+          s.active = !makingInactive;
+          showToast(makingInactive ? 'Student marked inactive.' : 'Student marked active.', 'success');
+          renderDetail(s);
+        }catch(err){
+          showToast(err.message || 'Could not update status.', 'error');
+          toggleActiveBtn.disabled = false;
+          toggleActiveBtn.textContent = originalText;
+        }
       });
     }
   }
