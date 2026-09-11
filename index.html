@@ -735,6 +735,7 @@
   <span id="bulkSelectedCount" style="font-size:13px; font-weight:600;">0 selected</span>
   <button class="btn btn-primary" id="bulkMarkVerifiedBtn" style="background:var(--color-success); border-color:var(--color-success);">Mark Verified</button>
   <button class="btn btn-primary" id="bulkMarkPendingBtn" style="background:var(--color-pending); border-color:var(--color-pending);">Mark Pending</button>
+  <button class="btn btn-ghost" id="bulkMarkInactiveBtn" style="background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2); display:none;">Mark Inactive</button>
   <button class="btn btn-ghost" id="bulkClearSelectionBtn" style="background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2);">Clear Selection</button>
 </div>
 <div id="helpChatToggle" style="position:fixed; bottom:24px; right:24px; width:52px; height:52px; border-radius:50%; background:var(--color-gold); color:var(--color-navy-deep); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; box-shadow:0 6px 18px rgba(0,0,0,.25); cursor:pointer; z-index:900;">?</div>
@@ -2704,7 +2705,7 @@ function renderDetail(r){
           <div class="detail-item"><div class="lab">Site Code</div><div class="val">${escapeHtml(r.siteCode)||'—'}</div></div>
           <div class="detail-item"><div class="lab">Student Type</div><div class="val">${escapeHtml(r.studentType)||'—'}</div></div>
           <div class="detail-item"><div class="lab">Current status</div><div class="val">${isDone?'Verified':'Pending'}</div></div>
-          <div class="detail-item"><div class="lab">Record status</div><div class="val">${r.active === false ? 'Inactive' : 'Active'}</div></div>
+          <div class="detail-item"><div class="lab">Record status</div><div class="val">${r.active === false ? '📁 Inactive' : 'Active'}</div></div>
           ${formatVerificationHistory(r)}
         </div>
         ${isViewer ? '' : `
@@ -2974,8 +2975,13 @@ function updateBulkActionBar(){
   const bar = document.getElementById('bulkActionBar');
   const helpToggle = document.getElementById('helpChatToggle');
   const countEl = document.getElementById('bulkSelectedCount');
+  const inactiveBtn = document.getElementById('bulkMarkInactiveBtn');
   const count = selectedStudentIds.size;
   if(!bar) return;
+  if(inactiveBtn){
+    const canEditBulk = sessionStorage.getItem(ADMIN_KEY) === 'yes' && sessionStorage.getItem(DEMO_KEY) !== 'yes';
+    inactiveBtn.style.display = canEditBulk ? 'inline-flex' : 'none';
+  }
   if(count > 0){
     bar.style.display = 'flex';
     if(helpToggle) helpToggle.style.display = 'none';
@@ -3012,6 +3018,29 @@ async function executeBulkStatusChange(status){
 
 document.getElementById('bulkMarkVerifiedBtn')?.addEventListener('click', () => executeBulkStatusChange('done'));
 document.getElementById('bulkMarkPendingBtn')?.addEventListener('click', () => executeBulkStatusChange('pending'));
+document.getElementById('bulkMarkInactiveBtn')?.addEventListener('click', async () => {
+  const ids = Array.from(selectedStudentIds);
+  if(!ids.length) return;
+  const confirmed = await showConfirmModal(`Mark ${ids.length} selected student(s) as inactive? They\u2019ll be hidden from the default roster view and excluded from pending counts until marked active again.`, 'Confirm');
+  if(!confirmed) return;
+  const btn = document.getElementById('bulkMarkInactiveBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Working…';
+  try{
+    const data = await runScript('bulkSetActiveStatus', ids, false, sessionStorage.getItem(SESSION_TOKEN_KEY));
+    if(!data.ok){ showToast(data.error || 'Bulk update failed.', 'error'); return; }
+    showToast(`${data.updatedCount} student(s) marked inactive.`, 'success');
+    selectedStudentIds.clear();
+    await fetchStudents();
+    updateBulkActionBar();
+  }catch(err){
+    showToast('Could not complete bulk update — ' + err.message, 'error');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+});
 document.getElementById('bulkClearSelectionBtn')?.addEventListener('click', () => {
   selectedStudentIds.clear();
   renderTable();
@@ -3062,7 +3091,7 @@ function renderTable(){
       <td class="mono">${escapeHtml(r.machineCode)||'—'}</td>
       <td>${siteCodeTag(r.siteCode)}</td>
       <td>${escapeHtml(r.studentType)||'—'}</td>
-      <td><span class="status-pill ${r.status==='done'?'done':'pending'}">${r.status==='done'?`<svg width="10" height="10" viewBox="0 0 24 24" style="vertical-align:-1px; margin-right:2px;"><path d="M4 12l6 6L20 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="${previousRosterStatus[r.id] !== undefined && previousRosterStatus[r.id] !== r.status ? 'check-draw-in' : ''}"/></svg>Verified`:'Pending'}</span>${(r.status==='done' && r.firstVerifiedBy && r.firstVerifiedBy !== r.verifiedBy) ? ' <span title="Overturned by admin">⚠️</span>' : ''}${r.locked ? ' 🔒' : ''}${r.notes ? ` <span title="${escapeHtml(r.notes)}">📝</span>` : ''}<span class="row-hover-hint">→</span></td>
+      <td><span class="status-pill ${r.status==='done'?'done':'pending'}">${r.status==='done'?`<svg width="10" height="10" viewBox="0 0 24 24" style="vertical-align:-1px; margin-right:2px;"><path d="M4 12l6 6L20 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="${previousRosterStatus[r.id] !== undefined && previousRosterStatus[r.id] !== r.status ? 'check-draw-in' : ''}"/></svg>Verified`:'Pending'}</span>${(r.status==='done' && r.firstVerifiedBy && r.firstVerifiedBy !== r.verifiedBy) ? ' <span title="Overturned by admin">⚠️</span>' : ''}${r.locked ? ' 🔒' : ''}${r.notes ? ` <span title="${escapeHtml(r.notes)}">📝</span>` : ''}${r.active === false ? ' <span title="Inactive">📁</span>' : ''}<span class="row-hover-hint">→</span></td>
     </tr>
   `).join('');
   roster.forEach(r => { previousRosterStatus[r.id] = r.status; });
