@@ -621,6 +621,9 @@
             <div class="chip active" data-filter="all">All</div>
             <div class="chip" data-filter="done">Verified</div>
             <div class="chip" data-filter="pending">Pending</div>
+            <label style="display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--color-text-muted); margin-left:8px; cursor:pointer; user-select:none;">
+              <input type="checkbox" id="showInactiveToggle" style="cursor:pointer;"> Show inactive
+            </label>
           </div>
         </div>
         <div style="padding:0 0 10px;">
@@ -783,6 +786,7 @@ let previousRosterStatus = {};
 let selectedStudentIds = new Set();
 let currentlyDisplayedStudent = null;
 let selectedAcademicYear = 'all';
+let showInactive = false;
 let hasInitializedAcademicYearFilter = false;
 
 // Computes the academic year label for "right now" - assumes the academic
@@ -800,8 +804,10 @@ function getCurrentAcademicYear(){
 // consistently everywhere rather than needing to be re-implemented at
 // each call site.
 function getFilteredRoster(){
-  if(selectedAcademicYear === 'all') return roster;
-  return roster.filter(r => r.academicYear === selectedAcademicYear);
+  let rows = roster;
+  if(!showInactive) rows = rows.filter(r => r.active !== false);
+  if(selectedAcademicYear === 'all') return rows;
+  return rows.filter(r => r.academicYear === selectedAcademicYear);
 }
 
 function populateAcademicYearFilter(){
@@ -1699,14 +1705,14 @@ function renderStats(){
 
   if(filteredRoster.length > 0 && done === filteredRoster.length && !hasShownCompletionCelebration){
     hasShownCompletionCelebration = true;
-    showToast(`All ${roster.length} students verified! Great work.`, 'success');
+    showToast(`All ${filteredRoster.length} students verified! Great work.`, 'success');
     launchConfetti();
-  } else if(done < roster.length){
+  } else if(done < filteredRoster.length){
     hasShownCompletionCelebration = false;
   }
 
   const currentMilestone = Math.floor(done / 100) * 100;
-  if(currentMilestone > 0 && currentMilestone > lastCelebratedMilestone && done < roster.length){
+  if(currentMilestone > 0 && currentMilestone > lastCelebratedMilestone && done < filteredRoster.length){
     lastCelebratedMilestone = currentMilestone;
     showToast(`🎉 ${currentMilestone} students verified — keep going!`, 'success');
   }
@@ -2683,7 +2689,7 @@ function renderDetail(r){
         </div>
         <div class="vc-head-text">
           <div class="name">${escapeHtml(r.name || '(no name on file)')}</div>
-          <div class="status-line">${isDone ? 'Biometric verification complete' : 'Awaiting biometric verification'}${locked ? ' · Locked' : ''}</div>
+          <div class="status-line">${isDone ? 'Biometric verification complete' : 'Awaiting biometric verification'}${locked ? ' · Locked' : ''}${r.active === false ? ' · Inactive' : ''}</div>
         </div>
         <button type="button" id="qrDetailBtn" title="Show QR code for quick lookup" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center; margin-left:auto;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="21" y1="14" x2="21" y2="21"/><line x1="14" y1="17.5" x2="21" y2="17.5"/></svg></button>
         <button type="button" id="printDetailBtn" title="Print this record" style="flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-navy); cursor:pointer; display:flex; align-items:center; justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
@@ -2698,6 +2704,7 @@ function renderDetail(r){
           <div class="detail-item"><div class="lab">Site Code</div><div class="val">${escapeHtml(r.siteCode)||'—'}</div></div>
           <div class="detail-item"><div class="lab">Student Type</div><div class="val">${escapeHtml(r.studentType)||'—'}</div></div>
           <div class="detail-item"><div class="lab">Current status</div><div class="val">${isDone?'Verified':'Pending'}</div></div>
+          <div class="detail-item"><div class="lab">Record status</div><div class="val">${r.active === false ? 'Inactive' : 'Active'}</div></div>
           ${formatVerificationHistory(r)}
         </div>
         ${isViewer ? '' : `
@@ -2733,6 +2740,11 @@ function renderDetail(r){
         ${canEdit ? `
           <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--color-border);">
             <button class="btn btn-ghost" id="editStudentBtn">Edit Student Details</button>
+          </div>
+        ` : ''}
+        ${canEdit ? `
+          <div style="margin-top:12px;">
+            <button class="btn btn-ghost" id="toggleActiveBtn">${r.active === false ? 'Mark Active' : 'Mark Inactive'}</button>
           </div>
         ` : ''}
         ${canDelete ? `
@@ -2797,6 +2809,33 @@ function renderDetail(r){
           showToast(data.changed === false ? 'No changes to save.' : 'Student details updated.', 'success');
           renderDetail(r);
         });
+      });
+    }
+  }
+
+  if(canEdit){
+    const toggleActiveBtn = document.getElementById('toggleActiveBtn');
+    if(toggleActiveBtn){
+      toggleActiveBtn.addEventListener('click', async () => {
+        const makingInactive = r.active !== false;
+        if(makingInactive){
+          const confirmed = await showConfirmModal(`Mark ${r.name || 'this student'} as inactive? They\u2019ll be hidden from the default roster view and excluded from pending counts until marked active again.`, 'Confirm');
+          if(!confirmed) return;
+        }
+        const originalText = toggleActiveBtn.textContent;
+        toggleActiveBtn.disabled = true;
+        toggleActiveBtn.textContent = 'Saving…';
+        try{
+          const data = await runScript('setStudentActiveStatus', r.id, !makingInactive, sessionStorage.getItem(SESSION_TOKEN_KEY));
+          if(!data.ok) throw new Error(data.error || 'Could not update status.');
+          r.active = !makingInactive;
+          showToast(makingInactive ? 'Student marked inactive.' : 'Student marked active.', 'success');
+          renderDetail(r);
+        }catch(err){
+          showToast(err.message || 'Could not update status.', 'error');
+          toggleActiveBtn.disabled = false;
+          toggleActiveBtn.textContent = originalText;
+        }
       });
     }
   }
@@ -2893,6 +2932,12 @@ document.querySelectorAll('.chip').forEach(chip => {
     currentFilter = chip.dataset.filter;
     renderTable();
   });
+});
+
+document.getElementById('showInactiveToggle')?.addEventListener('change', (e) => {
+  showInactive = e.target.checked;
+  renderStats();
+  renderTable();
 });
 
 document.querySelectorAll('.sortable-th').forEach(th => {
