@@ -2398,6 +2398,8 @@ async function showCustomReportModal(){
             <option value="all">All statuses</option>
             <option value="done">Verified only</option>
             <option value="pending">Pending only</option>
+            <option value="active">Active only</option>
+            <option value="inactive">Inactive only</option>
           </select>
           <select id="crSiteFilter" style="padding:9px 10px; border-radius:8px; border:1px solid var(--color-border); font-size:12.5px;">
             <option value="all">All hostels</option>
@@ -2525,7 +2527,9 @@ async function showCustomReportModal(){
 
 function generateCustomReportOutput(config){
   let rows = hostel.slice();
-  if(config.status !== 'all') rows = rows.filter(s => s.status === config.status);
+  if(config.status === 'active') rows = rows.filter(s => s.active !== false);
+  else if(config.status === 'inactive') rows = rows.filter(s => s.active === false);
+  else if(config.status === 'done' || config.status === 'pending') rows = rows.filter(s => s.status === config.status && s.active !== false);
   if(config.siteCode !== 'all') rows = rows.filter(s => s.hostelName === config.siteCode);
   if(config.academicYear && config.academicYear !== 'all') rows = rows.filter(s => s.academicYear === config.academicYear);
   if(config.dateFrom) rows = rows.filter(s => s.verifiedAt && s.verifiedAt.slice(0,10) >= config.dateFrom);
@@ -2958,6 +2962,8 @@ function showHostelCsvFilterModal(){
         <option value="all">All students</option>
         <option value="done">Verified only</option>
         <option value="pending">Non-verified only</option>
+        <option value="active">Active only</option>
+        <option value="inactive">Inactive only</option>
       </select>
       <div style="font-size:12px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; margin-bottom:6px;">Academic Year</div>
       <select id="hCsvAcademicYear" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13.5px; font-family:var(--font-body);">
