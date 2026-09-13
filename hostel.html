@@ -125,10 +125,13 @@
     100%{ transform:translate(var(--drift), 100vh) rotate(540deg); opacity:0; }
   }
   .stat-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:clamp(6px, 1.6vw, 8px); margin-top:14px; }
-  .stat{ border:1px solid var(--color-border); border-radius:8px; padding:clamp(7px, 1.6vw, 9px); text-align:center; }
-  .stat .n{ font-family:var(--font-display); font-size:clamp(16px, 3vw, 19px); font-weight:700; color:var(--color-heading); }
+  .stat{ border:1px solid var(--color-border); border-radius:12px; padding:clamp(9px, 1.7vw, 12px); text-align:left; background:var(--color-bg); }
+  .stat svg{ display:block; }
+  .stat .n{ font-family:var(--font-display); font-size:clamp(16px, 3vw, 19px); font-weight:700; color:var(--color-heading); margin-top:6px; }
   .stat .l{ font-size:clamp(8.5px, 1.5vw, 9.5px); color:var(--color-text-muted); text-transform:uppercase; }
+  .stat.done{ background:var(--color-success-soft); border-color:transparent; }
   .stat.done .n{ color:var(--color-success); }
+  .stat.pending{ background:var(--color-pending-soft); border-color:transparent; }
   .stat.pending .n{ color:var(--color-pending); }
   .sugg-item{ border:1px solid var(--color-border); border-radius:7px; padding:8px 10px; cursor:pointer; margin-top:6px; display:flex; justify-content:space-between; align-items:center; animation:suggSlideDown .18s ease-out backwards; }
   @keyframes suggSlideDown{ from{ opacity:0; transform:translateY(-6px); } to{ opacity:1; transform:translateY(0); } }
@@ -324,6 +327,13 @@
           <div class="stat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-navy)" stroke-width="2" style="margin-bottom:4px;"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v2M16 4v2"/></svg><div class="n" id="statTotal">0</div><div class="l">Total</div></div>
           <div class="stat done"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2" style="margin-bottom:4px;"><path d="M20 6 9 17l-5-5"/></svg><div class="n" id="statDone">0</div><div class="l">Verified</div></div>
           <div class="stat pending"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-pending)" stroke-width="2" style="margin-bottom:4px;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><div class="n" id="statPending">0</div><div class="l">Pending</div></div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; border:1px solid var(--color-border); border-radius:12px; padding:10px 14px; margin-top:10px;">
+          <div>
+            <div style="font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--color-heading);" id="statWeekTotal">0</div>
+            <div style="font-size:10px; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.4px;">Verified this week</div>
+          </div>
+          <svg width="90" height="28" viewBox="0 0 90 28" id="weekSparkline"></svg>
         </div>
       </div>
 
@@ -1262,6 +1272,8 @@ function renderStats(){
   if(ringCircle) ringCircle.style.strokeDashoffset = circumference * (1 - percent / 100);
   if(ringText) ringText.textContent = percent + '%';
 
+  renderWeekSparkline(filteredHostel);
+
   if(filteredHostel.length > 0 && done === filteredHostel.length && !hasShownCompletionCelebration){
     hasShownCompletionCelebration = true;
     showToast(`All ${filteredHostel.length} hostellers verified! Great work.`, 'success');
@@ -1313,6 +1325,42 @@ function renderStats(){
       });
     }
   }
+}
+
+function renderWeekSparkline(filteredHostel){
+  const svg = document.getElementById('weekSparkline');
+  const totalEl = document.getElementById('statWeekTotal');
+  if(!svg) return;
+
+  const days = [];
+  for(let i = 6; i >= 0; i--){
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+  const counts = {};
+  days.forEach(d => counts[d] = 0);
+  filteredHostel.forEach(s => {
+    if(!s.verifiedAt) return;
+    const dayKey = s.verifiedAt.slice(0, 10);
+    if(counts.hasOwnProperty(dayKey)) counts[dayKey]++;
+  });
+
+  const values = days.map(d => counts[d]);
+  const weekTotal = values.reduce((a, b) => a + b, 0);
+  if(totalEl) totalEl.textContent = weekTotal;
+
+  const w = 90, h = 28, pad = 3;
+  const maxVal = Math.max(...values, 1);
+  const stepX = (w - pad * 2) / (values.length - 1);
+  const points = values.map((v, i) => {
+    const x = pad + i * stepX;
+    const y = h - pad - ((v / maxVal) * (h - pad * 2));
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+
+  const successColor = getComputedStyle(document.documentElement).getPropertyValue('--color-success').trim() || '#1F8A56';
+  svg.innerHTML = `<polyline points="${points}" fill="none" stroke="${successColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
 }
 
 let hostelSummaryChartInstance = null;
@@ -2745,18 +2793,43 @@ function renderDetail(s){
           <div class="detail-item"><div class="lab">Food Coupon</div><div class="val">${escapeHtml(s.foodCoupon)||'—'}</div></div>
           <div class="detail-item"><div class="lab">Record status</div><div class="val">${s.active === false ? '📁 Inactive' : 'Active'}</div></div>
         </div>
-        ${(s.firstVerifiedBy || s.verifiedBy) ? `
-          <div style="margin-top:16px; border:1px solid var(--color-border); border-radius:10px; overflow:hidden;">
-            <div style="background:var(--color-bg); padding:10px 14px; font-size:11px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; border-bottom:1px solid var(--color-border);">Verification History</div>
-            <div style="padding:14px; font-size:12px; color:var(--color-text); line-height:2;">
-              <div><strong>Verified Status:</strong> ${isDone ? 'Verified' : 'Pending'}</div>
-              ${isAdminOrDemo ? `
-                ${s.firstVerifiedBy ? `<div><strong>First Verified at:</strong> ${escapeHtml(s.firstVerifiedAt)||'—'} and ${escapeHtml(s.firstVerifiedBy)}</div>` : ''}
-                ${s.verifiedBy ? `<div><strong>Last Verified at:</strong> ${escapeHtml(s.verifiedAt)||'—'} and ${escapeHtml(s.verifiedBy)}${getStatusSymbol(s)}</div>` : ''}
-              ` : ''}
+        ${(s.firstVerifiedBy || s.verifiedBy) ? (!isAdminOrDemo ? `
+          <div class="detail-item"><div class="lab">Verified Status</div><div class="val">${isDone ? 'Verified' : 'Pending'}</div></div>
+        ` : (() => {
+          const wasReverified = s.firstVerifiedBy && s.verifiedBy && s.firstVerifiedBy !== s.verifiedBy;
+          if(!wasReverified){
+            return `
+              <div style="margin-top:16px; display:flex; gap:12px; padding-top:4px;">
+                <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0; padding-top:3px;">
+                  <div style="width:10px; height:10px; border-radius:50%; background:var(--color-success);"></div>
+                </div>
+                <div style="flex:1;">
+                  <div style="font-size:13px; font-weight:600; color:var(--color-text);">Verified by ${escapeHtml(s.verifiedBy || s.firstVerifiedBy)||'—'}</div>
+                  <div style="font-size:11.5px; color:var(--color-text-muted); margin-top:2px;">${escapeHtml(s.verifiedAt || s.firstVerifiedAt)||'—'}</div>
+                </div>
+              </div>
+            `;
+          }
+          return `
+            <div style="margin-top:16px; display:flex; gap:12px; padding-top:4px;">
+              <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0; padding-top:3px;">
+                <div style="width:10px; height:10px; border-radius:50%; background:var(--color-text-muted);"></div>
+                <div style="width:2px; flex:1; background:var(--color-border); margin:4px 0; min-height:26px;"></div>
+                <div style="width:10px; height:10px; border-radius:50%; background:var(--color-gold);"></div>
+              </div>
+              <div style="flex:1;">
+                <div style="margin-bottom:18px;">
+                  <div style="font-size:13px; font-weight:600; color:var(--color-text);">Originally verified by ${escapeHtml(s.firstVerifiedBy)||'—'}</div>
+                  <div style="font-size:11.5px; color:var(--color-text-muted); margin-top:2px;">${escapeHtml(s.firstVerifiedAt)||'—'}</div>
+                </div>
+                <div>
+                  <div style="font-size:13px; font-weight:600; color:var(--color-text);">Most recently verified by ${escapeHtml(s.verifiedBy)||'—'}${getStatusSymbol(s)}</div>
+                  <div style="font-size:11.5px; color:var(--color-text-muted); margin-top:2px;">${escapeHtml(s.verifiedAt)||'—'}</div>
+                </div>
+              </div>
             </div>
-          </div>
-        ` : ''}
+          `;
+        })()) : ''}
         ${isViewer ? '' : (isInactive ? `
         <div class="verify-controls">
           <div style="font-size:12.5px; color:var(--color-text-muted); display:flex; align-items:center; gap:8px;">
