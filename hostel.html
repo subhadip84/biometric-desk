@@ -621,9 +621,9 @@ function showChangePasswordModal(){
   overlay.innerHTML = `
     <div class="modal-box">
       <h3>Change Password</h3>
-      <input type="password" id="cpOldPassword" placeholder="Current password" autocomplete="off">
-      <input type="password" id="cpNewPassword" placeholder="New password (min. 4 characters)" autocomplete="off" style="margin-top:8px;">
-      <input type="password" id="cpConfirmPassword" placeholder="Confirm new password" autocomplete="off" style="margin-top:8px;">
+      <input type="password" id="cpOldPassword" placeholder="Current password" autocomplete="current-password">
+      <input type="password" id="cpNewPassword" placeholder="New password (min. 4 characters)" autocomplete="new-password" style="margin-top:8px;">
+      <input type="password" id="cpConfirmPassword" placeholder="Confirm new password" autocomplete="new-password" style="margin-top:8px;">
       <div class="modal-error" id="cpError" style="margin-top:8px;"></div>
       <div class="modal-actions">
         <button class="btn btn-ghost" id="cpCancelBtn">Cancel</button>
