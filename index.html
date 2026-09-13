@@ -2687,6 +2687,7 @@ function renderDetail(r){
   const canUnlock = !!perms.unlockRecords;
   const canDelete = !!perms.deleteStudent;
   const canEdit = sessionStorage.getItem(ADMIN_KEY) === 'yes' && sessionStorage.getItem(DEMO_KEY) !== 'yes';
+  const isInactive = r.active === false;
   detailArea.innerHTML = `
     <div class="verify-card">
       <div class="vc-head">
@@ -2713,7 +2714,13 @@ function renderDetail(r){
           <div class="detail-item"><div class="lab">Record status</div><div class="val">${r.active === false ? '📁 Inactive' : 'Active'}</div></div>
           ${formatVerificationHistory(r)}
         </div>
-        ${isViewer ? '' : `
+        ${isViewer ? '' : (isInactive ? `
+        <div class="verify-controls">
+          <div class="search-hint" style="display:flex; align-items:center; gap:8px;">
+            <span>📁</span> This student is marked <strong>Inactive</strong>. Biometric verification and other actions are disabled until an admin reactivates this record.
+          </div>
+        </div>
+        ` : `
         <div class="verify-controls">
           <div class="vc-label">Mark biometric status after verifying with the student</div>
           <div class="radio-row">
@@ -2732,11 +2739,11 @@ function renderDetail(r){
           ` : ''}
           <div class="saved-note" id="savedNote">Saved to Sheet.</div>
         </div>
-        `}
+        `)}
         <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--color-border);">
           <div class="vc-label" style="margin-bottom:8px;">Notes</div>
-          <textarea id="studentNoteText" placeholder="Add a note for this student (e.g. awaiting document resubmission)…" rows="3" ${isViewer ? 'readonly' : ''} style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); resize:vertical; box-sizing:border-box;">${escapeHtml(r.notes || '')}</textarea>
-          ${isViewer ? '' : `
+          <textarea id="studentNoteText" placeholder="Add a note for this student (e.g. awaiting document resubmission)…" rows="3" ${(isViewer || isInactive) ? 'readonly' : ''} style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); resize:vertical; box-sizing:border-box; ${isInactive ? 'background:var(--color-bg); color:var(--color-text-muted);' : ''}">${escapeHtml(r.notes || '')}</textarea>
+          ${(isViewer || isInactive) ? '' : `
           <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
             <button class="btn btn-ghost" id="saveNoteBtn">Save Note</button>
             <span id="noteSavedHint" style="font-size:11.5px; color:var(--color-success); display:none;">Saved</span>
