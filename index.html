@@ -6634,6 +6634,10 @@ let staffChatCurrentPartnerId = null;
 let staffChatCurrentPartnerName = '';
 let staffChatPollTimer = null;
 let staffChatBadgeTimer = null;
+let staffChatCurrentMessages = [];
+let staffChatSocket = null;
+let staffChatReconnectDelay = 2000;
+let staffChatReconnectTimer = null;
 
 function initialsFor(name){
   if(!name) return '?';
@@ -6712,7 +6716,10 @@ async function pollStaffChatMessages(){
   if(!staffChatCurrentPartnerId) return;
   try{
     const data = await runScript('getChatMessages', staffChatCurrentPartnerId, sessionStorage.getItem(SESSION_TOKEN_KEY));
-    if(data.ok) renderStaffChatMessages(data.messages);
+    if(data.ok){
+      staffChatCurrentMessages = data.messages;
+      renderStaffChatMessages(staffChatCurrentMessages);
+    }
   }catch(e){ /* silent - next poll will retry */ }
 }
 
@@ -6726,7 +6733,7 @@ function openStaffChatConversation(userId, name){
   if(staffChatConvoView) staffChatConvoView.style.display = 'flex';
   pollStaffChatMessages();
   if(staffChatPollTimer) clearInterval(staffChatPollTimer);
-  staffChatPollTimer = setInterval(pollStaffChatMessages, 10000);
+  staffChatPollTimer = setInterval(pollStaffChatMessages, 25000); // safety-net fallback only - WebSocket handles real-time delivery
   if(staffChatInput) staffChatInput.focus();
   updateStaffChatBadge();
 }
@@ -6772,6 +6779,56 @@ async function updateStaffChatBadge(){
       staffChatBadge.style.display = 'none';
     }
   }catch(e){ /* silent - next poll will retry */ }
+}
+
+// Handles a message pushed instantly over the WebSocket connection - if
+// it's for the conversation currently on screen, it's appended and shown
+// right away with zero delay; otherwise the badge/conversation list are
+// refreshed immediately (rather than waiting for the next 25s fallback
+// poll) and a toast lets the user know, even if the chat panel is closed.
+function handleIncomingChatMessage(message){
+  if(staffChatCurrentPartnerId && message.from === staffChatCurrentPartnerId && staffChatPanel && staffChatPanel.style.display === 'flex'){
+    staffChatCurrentMessages.push(message);
+    renderStaffChatMessages(staffChatCurrentMessages);
+    runScript('getChatMessages', staffChatCurrentPartnerId, sessionStorage.getItem(SESSION_TOKEN_KEY)).catch(() => {}); // marks it read server-side
+  } else {
+    updateStaffChatBadge();
+    if(staffChatPanel && staffChatPanel.style.display === 'flex' && staffChatListView && staffChatListView.style.display !== 'none'){
+      renderStaffChatConversationList();
+    }
+    if(typeof showToast === 'function') showToast(`New message from ${message.fromName}`, 'success');
+  }
+}
+
+// Opens the real-time connection for instant chat delivery. Reconnects
+// automatically with a short backoff if the connection drops (network
+// blip, server restart) rather than silently going quiet - the polling
+// fallback above still covers delivery in the meantime either way.
+function connectStaffChatWebSocket(){
+  const token = sessionStorage.getItem(SESSION_TOKEN_KEY);
+  if(!token) return;
+  const wsUrl = API_BASE_URL.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:') + '/ws?token=' + encodeURIComponent(token);
+  try{
+    staffChatSocket = new WebSocket(wsUrl);
+  }catch(e){ return; }
+
+  staffChatSocket.addEventListener('open', () => {
+    staffChatReconnectDelay = 2000; // reset backoff after a successful connection
+  });
+  staffChatSocket.addEventListener('message', (event) => {
+    try{
+      const data = JSON.parse(event.data);
+      if(data.type === 'chatMessage' && data.message) handleIncomingChatMessage(data.message);
+    }catch(e){ /* ignore malformed payloads */ }
+  });
+  staffChatSocket.addEventListener('close', () => {
+    if(staffChatReconnectTimer) clearTimeout(staffChatReconnectTimer);
+    staffChatReconnectTimer = setTimeout(() => {
+      staffChatReconnectDelay = Math.min(staffChatReconnectDelay * 1.5, 30000); // back off, capped at 30s
+      connectStaffChatWebSocket();
+    }, staffChatReconnectDelay);
+  });
+  staffChatSocket.addEventListener('error', () => { /* the close handler fires next and reconnects */ });
 }
 
 if(staffChatToggle && staffChatPanel){
@@ -6858,6 +6915,7 @@ if(staffChatToggle && staffChatPanel){
     staffChatToggle.style.display = 'flex';
     updateStaffChatBadge();
     staffChatBadgeTimer = setInterval(updateStaffChatBadge, 30000);
+    connectStaffChatWebSocket();
   }
 }
 
