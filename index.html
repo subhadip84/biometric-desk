@@ -748,6 +748,34 @@
   <button class="btn btn-ghost" id="bulkMarkInactiveBtn" style="background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2); display:none;">Mark Inactive</button>
   <button class="btn btn-ghost" id="bulkClearSelectionBtn" style="background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2);">Clear Selection</button>
 </div>
+<div id="staffChatToggle" style="display:none; position:fixed; bottom:24px; right:88px; width:52px; height:52px; border-radius:50%; background:var(--color-navy); color:#fff; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(0,0,0,.25); cursor:pointer; z-index:900;">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+  <span id="staffChatBadge" style="display:none; position:absolute; top:-2px; right:-2px; background:var(--color-pending); color:#fff; font-size:10.5px; font-weight:700; min-width:18px; height:18px; border-radius:9px; align-items:center; justify-content:center; padding:0 4px; border:2px solid var(--color-bg);"></span>
+</div>
+
+<div id="staffChatPanel" style="display:none; position:fixed; bottom:88px; right:88px; width:310px; max-height:460px; background:#fff; border-radius:14px; box-shadow:0 14px 36px rgba(0,0,0,.22); overflow:visible; z-index:900; flex-direction:column;">
+  <div style="background:var(--color-navy); color:#fff; padding:12px 14px; display:flex; align-items:center; gap:8px; border-radius:14px 14px 0 0;">
+    <span id="staffChatBackBtn" style="display:none; font-size:16px; cursor:pointer; padding:2px 4px 2px 0;">←</span>
+    <div style="width:26px; height:26px; border-radius:50%; background:var(--color-gold); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; color:var(--color-navy-deep); font-weight:700;" id="staffChatHeaderAvatar">💬</div>
+    <div style="font-size:13px; font-weight:600; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" id="staffChatHeaderTitle">Messages</div>
+    <span id="staffChatCloseBtn" style="font-size:16px; opacity:.8; cursor:pointer;">✕</span>
+  </div>
+
+  <div id="staffChatListView" style="display:flex; flex-direction:column;">
+    <div id="staffChatConversationList" style="padding:6px; max-height:200px; overflow-y:auto;"></div>
+    <div style="padding:8px 12px 4px; font-size:11px; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.3px; border-top:1px solid var(--color-border);">Online now</div>
+    <div id="staffChatOnlineList" style="padding:6px; max-height:150px; overflow-y:auto;"></div>
+  </div>
+
+  <div id="staffChatConvoView" style="display:none; flex-direction:column;">
+    <div id="staffChatMessages" style="padding:12px 14px; display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto;"></div>
+    <div style="padding:10px 12px; border-top:1px solid var(--color-border); display:flex; gap:6px; align-items:center;">
+      <input type="text" id="staffChatInput" placeholder="Type a message…" style="flex:1; border:1px solid var(--color-border); border-radius:20px; padding:7px 12px; font-size:12.5px; font-family:var(--font-body); min-width:0;">
+      <button id="staffChatSendBtn" style="width:32px; height:32px; border-radius:50%; background:var(--color-navy); color:#fff; border:none; cursor:pointer; flex-shrink:0; font-size:14px;">➤</button>
+    </div>
+  </div>
+</div>
+
 <div id="helpChatToggle" style="position:fixed; bottom:24px; right:24px; width:52px; height:52px; border-radius:50%; background:var(--color-gold); color:var(--color-navy-deep); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; box-shadow:0 6px 18px rgba(0,0,0,.25); cursor:pointer; z-index:900;">?</div>
 
 <div id="helpChatPanel" style="display:none; position:fixed; bottom:88px; right:24px; width:310px; max-height:460px; background:#fff; border-radius:14px; box-shadow:0 14px 36px rgba(0,0,0,.22); overflow:visible; z-index:900; flex-direction:column;">
@@ -3509,9 +3537,17 @@ async function renderOnlineUsers(){
             <div style="font-size:10.5px; color:var(--color-text-muted); font-family:var(--font-mono); margin-top:2px;">${escapeHtml(u.ip)||'IP unknown'} · last seen ${lastSeenText}</div>
           </div>
           <div style="font-size:11.5px; color:var(--color-text-muted); flex-shrink:0;">active ${durationText}</div>
+          ${u.userId && u.userId !== sessionStorage.getItem(USERID_KEY) ? `<button class="online-chat-btn" data-id="${escapeHtml(u.userId)}" data-name="${escapeHtml(u.actorName)}" title="Chat with ${escapeHtml(u.actorName)}" style="background:none; border:none; cursor:pointer; color:var(--color-navy); flex-shrink:0; padding:2px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></button>` : ''}
         </div>
       `;
     }).join('');
+    contentEl.querySelectorAll('.online-chat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if(typeof staffChatPanel === 'undefined' || !staffChatPanel) return;
+        staffChatPanel.style.display = 'flex';
+        openStaffChatConversation(btn.dataset.id, btn.dataset.name);
+      });
+    });
   }catch(err){
     contentEl.innerHTML = `<div style="font-size:12px; color:var(--color-text-muted);">Could not check online users right now.</div>`;
   }
@@ -6571,6 +6607,196 @@ if(helpChatToggle && helpChatPanel){
 }
 if(helpChatCloseBtn){
   helpChatCloseBtn.addEventListener('click', () => { helpChatPanel.style.display = 'none'; helpChatMenu.style.display = 'none'; });
+}
+
+// ============================================================
+// Staff/admin direct chat - a separate widget from the Help Assistant.
+// Polling only happens while the panel is genuinely open, and at a modest
+// interval, to avoid hammering the shared Sheets read quota. The unread
+// badge uses a much slower background poll so it stays current even
+// while the panel is closed, without adding meaningful load.
+// ============================================================
+const staffChatToggle = document.getElementById('staffChatToggle');
+const staffChatPanel = document.getElementById('staffChatPanel');
+const staffChatCloseBtn = document.getElementById('staffChatCloseBtn');
+const staffChatBackBtn = document.getElementById('staffChatBackBtn');
+const staffChatListView = document.getElementById('staffChatListView');
+const staffChatConvoView = document.getElementById('staffChatConvoView');
+const staffChatMessagesEl = document.getElementById('staffChatMessages');
+const staffChatInput = document.getElementById('staffChatInput');
+const staffChatSendBtn = document.getElementById('staffChatSendBtn');
+const staffChatHeaderTitle = document.getElementById('staffChatHeaderTitle');
+const staffChatHeaderAvatar = document.getElementById('staffChatHeaderAvatar');
+const staffChatBadge = document.getElementById('staffChatBadge');
+
+let staffChatCurrentPartnerId = null;
+let staffChatCurrentPartnerName = '';
+let staffChatPollTimer = null;
+let staffChatBadgeTimer = null;
+
+function initialsFor(name){
+  if(!name) return '?';
+  return name.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+}
+
+async function renderStaffChatConversationList(){
+  const listEl = document.getElementById('staffChatConversationList');
+  if(!listEl) return;
+  try{
+    const data = await runScript('getChatConversations', sessionStorage.getItem(SESSION_TOKEN_KEY));
+    if(!data.ok || !data.conversations.length){
+      listEl.innerHTML = `<div style="font-size:12px; color:var(--color-text-muted); padding:8px 6px;">No conversations yet.</div>`;
+      return;
+    }
+    listEl.innerHTML = data.conversations.map(c => `
+      <div class="staff-chat-convo-item" data-id="${escapeHtml(c.otherUserId)}" data-name="${escapeHtml(c.otherName)}" style="display:flex; align-items:center; gap:8px; padding:8px 6px; border-radius:8px; cursor:pointer;">
+        <div style="width:30px; height:30px; border-radius:50%; background:var(--color-navy); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0;">${escapeHtml(initialsFor(c.otherName))}</div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:12.5px; color:var(--color-text); font-weight:${c.unreadCount > 0 ? '700' : '500'};">${escapeHtml(c.otherName)}</div>
+          <div style="font-size:11px; color:var(--color-text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(c.lastMessage)}</div>
+        </div>
+        ${c.unreadCount > 0 ? `<span style="background:var(--color-pending); color:#fff; font-size:10px; font-weight:700; min-width:16px; height:16px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 4px; flex-shrink:0;">${c.unreadCount}</span>` : ''}
+      </div>
+    `).join('');
+    listEl.querySelectorAll('.staff-chat-convo-item').forEach(el => {
+      el.addEventListener('click', () => openStaffChatConversation(el.dataset.id, el.dataset.name));
+    });
+  }catch(e){
+    listEl.innerHTML = `<div style="font-size:12px; color:var(--color-text-muted); padding:8px 6px;">Could not load conversations.</div>`;
+  }
+}
+
+async function renderStaffChatOnlineList(){
+  const listEl = document.getElementById('staffChatOnlineList');
+  if(!listEl) return;
+  try{
+    const data = await runScript('getOnlineUsers');
+    const myUserId = sessionStorage.getItem(USERID_KEY);
+    const others = (data.ok ? data.users : []).filter(u => u.userId !== myUserId);
+    if(!others.length){
+      listEl.innerHTML = `<div style="font-size:12px; color:var(--color-text-muted); padding:6px;">No one else is online.</div>`;
+      return;
+    }
+    listEl.innerHTML = others.map(u => `
+      <div class="staff-chat-online-item" data-id="${escapeHtml(u.userId)}" data-name="${escapeHtml(u.actorName)}" style="display:flex; align-items:center; gap:8px; padding:7px 6px; border-radius:8px; cursor:pointer;">
+        <span style="width:7px; height:7px; border-radius:50%; background:var(--color-success); flex-shrink:0;"></span>
+        <div style="font-size:12.5px; color:var(--color-text);">${escapeHtml(u.actorName)}</div>
+      </div>
+    `).join('');
+    listEl.querySelectorAll('.staff-chat-online-item').forEach(el => {
+      el.addEventListener('click', () => openStaffChatConversation(el.dataset.id, el.dataset.name));
+    });
+  }catch(e){
+    listEl.innerHTML = `<div style="font-size:12px; color:var(--color-text-muted); padding:6px;">Could not load online users.</div>`;
+  }
+}
+
+function renderStaffChatMessages(messages){
+  if(!staffChatMessagesEl) return;
+  const myUserId = sessionStorage.getItem(USERID_KEY);
+  staffChatMessagesEl.innerHTML = messages.map(m => {
+    const mine = m.from === myUserId;
+    const time = new Date(m.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `
+      <div style="align-self:${mine ? 'flex-end' : 'flex-start'}; max-width:85%;">
+        <div style="background:${mine ? 'var(--color-navy)' : '#F0F2F6'}; color:${mine ? '#fff' : 'var(--color-navy-deep)'}; border-radius:10px; padding:8px 10px; font-size:12px;">${escapeHtml(m.text)}</div>
+        <div style="font-size:9.5px; color:var(--color-text-muted); margin-top:2px; text-align:${mine ? 'right' : 'left'};">${time}</div>
+      </div>
+    `;
+  }).join('');
+  staffChatMessagesEl.scrollTop = staffChatMessagesEl.scrollHeight;
+}
+
+async function pollStaffChatMessages(){
+  if(!staffChatCurrentPartnerId) return;
+  try{
+    const data = await runScript('getChatMessages', staffChatCurrentPartnerId, sessionStorage.getItem(SESSION_TOKEN_KEY));
+    if(data.ok) renderStaffChatMessages(data.messages);
+  }catch(e){ /* silent - next poll will retry */ }
+}
+
+function openStaffChatConversation(userId, name){
+  staffChatCurrentPartnerId = userId;
+  staffChatCurrentPartnerName = name;
+  if(staffChatHeaderTitle) staffChatHeaderTitle.textContent = name;
+  if(staffChatHeaderAvatar) staffChatHeaderAvatar.textContent = initialsFor(name);
+  if(staffChatBackBtn) staffChatBackBtn.style.display = 'inline';
+  if(staffChatListView) staffChatListView.style.display = 'none';
+  if(staffChatConvoView) staffChatConvoView.style.display = 'flex';
+  pollStaffChatMessages();
+  if(staffChatPollTimer) clearInterval(staffChatPollTimer);
+  staffChatPollTimer = setInterval(pollStaffChatMessages, 10000);
+  if(staffChatInput) staffChatInput.focus();
+  updateStaffChatBadge();
+}
+
+function closeStaffChatConversation(){
+  staffChatCurrentPartnerId = null;
+  if(staffChatPollTimer){ clearInterval(staffChatPollTimer); staffChatPollTimer = null; }
+  if(staffChatBackBtn) staffChatBackBtn.style.display = 'none';
+  if(staffChatHeaderTitle) staffChatHeaderTitle.textContent = 'Messages';
+  if(staffChatHeaderAvatar) staffChatHeaderAvatar.textContent = '💬';
+  if(staffChatListView) staffChatListView.style.display = 'flex';
+  if(staffChatConvoView) staffChatConvoView.style.display = 'none';
+  renderStaffChatConversationList();
+  renderStaffChatOnlineList();
+}
+
+async function sendStaffChatMessage(){
+  const text = staffChatInput.value.trim();
+  if(!text || !staffChatCurrentPartnerId) return;
+  staffChatInput.value = '';
+  staffChatSendBtn.disabled = true;
+  try{
+    const data = await runScript('sendChatMessage', staffChatCurrentPartnerId, text, sessionStorage.getItem(SESSION_TOKEN_KEY));
+    if(!data.ok){ showToast(data.error || 'Could not send message.', 'error'); return; }
+    await pollStaffChatMessages();
+  }catch(e){
+    showToast('Could not send message.', 'error');
+  }finally{
+    staffChatSendBtn.disabled = false;
+    staffChatInput.focus();
+  }
+}
+
+async function updateStaffChatBadge(){
+  if(!staffChatBadge) return;
+  try{
+    const data = await runScript('getChatConversations', sessionStorage.getItem(SESSION_TOKEN_KEY));
+    const total = data.ok ? data.conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0) : 0;
+    if(total > 0){
+      staffChatBadge.textContent = total > 9 ? '9+' : String(total);
+      staffChatBadge.style.display = 'flex';
+    } else {
+      staffChatBadge.style.display = 'none';
+    }
+  }catch(e){ /* silent - next poll will retry */ }
+}
+
+if(staffChatToggle && staffChatPanel){
+  staffChatToggle.addEventListener('click', () => {
+    const isOpen = staffChatPanel.style.display === 'flex';
+    if(isOpen){
+      staffChatPanel.style.display = 'none';
+    } else {
+      staffChatPanel.style.display = 'flex';
+      closeStaffChatConversation(); // resets to the list view and refreshes it
+    }
+  });
+  if(staffChatCloseBtn) staffChatCloseBtn.addEventListener('click', () => { staffChatPanel.style.display = 'none'; });
+  if(staffChatBackBtn) staffChatBackBtn.addEventListener('click', closeStaffChatConversation);
+  if(staffChatSendBtn) staffChatSendBtn.addEventListener('click', sendStaffChatMessage);
+  if(staffChatInput) staffChatInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') sendStaffChatMessage(); });
+
+  // Show the toggle for everyone except read-only viewer and demo accounts -
+  // either side can start a conversation, so this isn't admin-only.
+  const isViewerAccount = sessionStorage.getItem(VIEWER_KEY) === 'yes';
+  const isDemoAccount = sessionStorage.getItem(DEMO_KEY) === 'yes';
+  if(!isViewerAccount && !isDemoAccount){
+    staffChatToggle.style.display = 'flex';
+    updateStaffChatBadge();
+    staffChatBadgeTimer = setInterval(updateStaffChatBadge, 30000);
+  }
 }
 
 // --- Three-dot menu: Start New Chat / View Chat / End Chat ---
