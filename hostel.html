@@ -3695,17 +3695,23 @@ document.getElementById('importVerifyBtn')?.addEventListener('click', () => show
 document.getElementById('importInactiveBtn')?.addEventListener('click', showHostelImportInactiveModal);
 
 // --- Help Assistant: hostel-specific FAQ, falling back to the same AI assistant used by the main app ---
-const HOSTEL_HELP_FAQ = [
-  { question: 'How do I mark a student as Face Capture Done?', keywords: ['mark', 'done', 'verify', 'face capture'], answer: 'Search for the student, select them, then choose "Done" under "Mark face capture status". This locks the record automatically.' },
-  { question: 'How do I unlock a record?', keywords: ['unlock', 'change', 'edit locked'], answer: 'Open the student\'s detail card, click "Unlock (admin)" near the bottom, then enter the admin password. Only admin accounts can do this.' },
-  { question: 'How do I download a report?', keywords: ['download', 'csv', 'export', 'report'], answer: 'Open the Welcome menu (top right) and choose "Download Report (CSV)" - you can filter by Verified, Pending, or All.' },
-  { question: 'What does the 🏠 symbol mean?', keywords: ['house', 'symbol', 'icon', '🏠'], answer: 'It means this student was verified by a hosteller-only staff account, rather than an admin.' },
-  { question: 'What does the ⚠️ symbol mean?', keywords: ['warning', 'triangle', '⚠'], answer: 'It means this record was unlocked and changed again by an admin after its first verification - an overturn/correction.' }
-];
+let cachedHelpFaqList = null;
+async function getHelpFaqList(){
+  if(cachedHelpFaqList) return cachedHelpFaqList;
+  try{
+    const data = await runScript('getHelpFaqList', sessionStorage.getItem(SESSION_TOKEN_KEY), 'hostel');
+    if(data.ok){
+      cachedHelpFaqList = data.list;
+      return cachedHelpFaqList;
+    }
+  }catch(e){ /* fall through to empty list below */ }
+  return [];
+}
 
-function findHostelHelpAnswer(text){
+async function findHostelHelpAnswer(text){
   const q = text.toLowerCase();
-  for(const item of HOSTEL_HELP_FAQ){
+  const list = await getHelpFaqList();
+  for(const item of list){
     if(item.keywords.some(k => q.indexOf(k) !== -1)) return { answer: item.answer, matchedQuestion: item.question };
   }
   return { answer: "I don't have an answer for that yet — try one of the questions below, or contact AKC IT Support for anything else.", matchedQuestion: null };
@@ -3723,13 +3729,14 @@ function appendHelpMessage(text, fromUser, allowHtml){
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-function renderHelpChips(){
+async function renderHelpChips(){
   const chipsEl = document.getElementById('helpChatChips');
   if(!chipsEl) return;
-  chipsEl.innerHTML = HOSTEL_HELP_FAQ.map((item, i) => `<div class="help-chip" data-idx="${i}" style="font-size:11px; border:1px solid var(--color-border); border-radius:20px; padding:4px 10px; color:var(--color-navy-deep); cursor:pointer;">${escapeHtml(item.question)}</div>`).join('');
+  const list = await getHelpFaqList();
+  chipsEl.innerHTML = list.map((item, i) => `<div class="help-chip" data-idx="${i}" style="font-size:11px; border:1px solid var(--color-border); border-radius:20px; padding:4px 10px; color:var(--color-navy-deep); cursor:pointer;">${escapeHtml(item.question)}</div>`).join('');
   chipsEl.querySelectorAll('.help-chip').forEach(chip => {
     chip.addEventListener('click', () => {
-      const item = HOSTEL_HELP_FAQ[Number(chip.dataset.idx)];
+      const item = list[Number(chip.dataset.idx)];
       appendHelpMessage(item.question, true);
       appendHelpMessage(item.answer, false);
       runScript('logHelpQuestion', item.question).catch(() => {});
@@ -4016,7 +4023,7 @@ async function submitHelpQuestion(){
   appendHelpMessage(text, true);
   helpChatInput.value = '';
 
-  const result = findHostelHelpAnswer(text);
+  const result = await findHostelHelpAnswer(text);
   if(result.matchedQuestion){
     appendHelpMessage(result.answer, false);
     runScript('logHelpQuestion', result.matchedQuestion).catch(() => {});
