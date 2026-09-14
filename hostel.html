@@ -271,9 +271,8 @@
         <div class="menu-group" id="menuGroupData">
           <div class="menu-group-label">Data</div>
           <button class="menu-item" id="downloadCsvBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Download Report (CSV)</button>
-          <button class="menu-item" id="importNewBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg>Import New Hostel Data</button>
+          <button class="menu-item" id="importStudentsMenuBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg>Import Students</button>
           <button class="menu-item" id="importVerifyBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Import Face Capture Updates</button>
-          <button class="menu-item" id="importInactiveBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M2 7l4.44-4.5A2 2 0 0 1 7.9 2h8.2a2 2 0 0 1 1.46.5L22 7"/><line x1="10" y1="12" x2="14" y2="12"/></svg>Import Inactive List</button>
           <button class="menu-item" id="hostelCustomReportBtn" style="display:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9l-6-6z"/><path d="M13 3v6h6"/><line x1="9" y1="14" x2="15" y2="14"/><line x1="9" y1="17" x2="13" y2="17"/></svg>Custom Report</button>
         </div>
 
@@ -531,13 +530,11 @@ if(isAdminOrDemo){
   document.getElementById('hostelSpotCheckPanel').style.display = 'flex';
   document.getElementById('hostelLeaderboardPanel').style.display = 'block';
   document.getElementById('hostelDuplicateCheckPanel').style.display = 'block';
-  ['hostelActivityLogBtn', 'hostelHelpStatsBtn', 'hostelEodSummaryBtn', 'hostelCustomReportBtn', 'downloadCsvBtn', 'importNewBtn', 'importVerifyBtn', 'dataIntegrityBtn'].forEach(id => {
+  ['hostelActivityLogBtn', 'hostelHelpStatsBtn', 'hostelEodSummaryBtn', 'hostelCustomReportBtn', 'downloadCsvBtn', 'importStudentsMenuBtn', 'importVerifyBtn', 'dataIntegrityBtn'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = 'block';
   });
 }
-const importInactiveBtn = document.getElementById('importInactiveBtn');
-if(importInactiveBtn) importInactiveBtn.style.display = (sessionStorage.getItem(ADMIN_KEY) === 'yes' && sessionStorage.getItem(DEMO_KEY) !== 'yes') ? 'block' : 'none';
 const isDemo = sessionStorage.getItem(DEMO_KEY) === 'yes';
 const isHostellerOnly = sessionStorage.getItem(HOSTELLER_ONLY_KEY) === 'yes';
 if(isHostellerOnly){
@@ -3480,6 +3477,33 @@ function showHostelInactiveImportResultModal(updated, alreadyInactive, notFoundR
   okBtn.addEventListener('click', () => overlay.remove());
 }
 
+function showHostelImportChoiceModal(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:400px;">
+      <h3>Import Students</h3>
+      <div style="font-size:12.5px; color:var(--color-text-muted); margin-bottom:16px;">What would you like to do?</div>
+      <div style="display:flex; gap:10px;">
+        <button id="hicNewBtn" style="flex:1; border:2px solid var(--color-navy); border-radius:10px; padding:16px 10px; background:#fff; cursor:pointer; text-align:center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-navy)" stroke-width="2" style="margin:0 auto 8px; display:block;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg>
+          <div style="font-size:12.5px; font-weight:600; color:var(--color-navy);">Add New Students</div>
+        </button>
+        <button id="hicInactiveBtn" style="flex:1; border:1px solid var(--color-border); border-radius:10px; padding:16px 10px; background:#fff; cursor:pointer; text-align:center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" style="margin:0 auto 8px; display:block;"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M2 7l4.44-4.5A2 2 0 0 1 7.9 2h8.2a2 2 0 0 1 1.46.5L22 7"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          <div style="font-size:12.5px; font-weight:600; color:var(--color-text-muted);">Mark Inactive</div>
+        </button>
+      </div>
+      <button class="btn btn-ghost" id="hicCancelBtn" style="width:100%; margin-top:14px;">Cancel</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  function close(){ overlay.remove(); }
+  overlay.querySelector('#hicNewBtn').addEventListener('click', () => { close(); showHostelImportModal('new'); });
+  overlay.querySelector('#hicInactiveBtn').addEventListener('click', () => { close(); showHostelImportInactiveModal(); });
+  overlay.querySelector('#hicCancelBtn').addEventListener('click', close);
+}
+
 function showHostelImportModal(kind){
   const isNew = kind === 'new';
   const fnName = isNew ? 'importNewHostelData' : 'importHostelVerificationUpdates';
@@ -3690,9 +3714,18 @@ function showHostelImportModal(kind){
   submitBtn.addEventListener('click', submitHostelImport);
 }
 
-document.getElementById('importNewBtn')?.addEventListener('click', () => showHostelImportModal('new'));
+document.getElementById('importStudentsMenuBtn')?.addEventListener('click', () => {
+  const canImportNew = isAdminOrDemo;
+  const canImportInactive = sessionStorage.getItem(ADMIN_KEY) === 'yes' && sessionStorage.getItem(DEMO_KEY) !== 'yes';
+  if(canImportNew && canImportInactive){
+    showHostelImportChoiceModal();
+  } else if(canImportNew){
+    showHostelImportModal('new');
+  } else if(canImportInactive){
+    showHostelImportInactiveModal();
+  }
+});
 document.getElementById('importVerifyBtn')?.addEventListener('click', () => showHostelImportModal('verify'));
-document.getElementById('importInactiveBtn')?.addEventListener('click', showHostelImportInactiveModal);
 
 // --- Help Assistant: hostel-specific FAQ, falling back to the same AI assistant used by the main app ---
 let cachedHelpFaqList = null;
