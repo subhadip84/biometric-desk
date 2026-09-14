@@ -6397,42 +6397,22 @@ if(importInactiveBtn){
 }
 
 // --- Help Assistant chatbot ---
-const HELP_FAQ_GENERAL = [
-  { keywords: ['search', 'find student', 'look up'], question: 'How do I search for a student?', answer: 'Use the search box on the left — type any part of the Application/Roll No, Registration Number, Machine Code, or Name, then press Enter or click Search.' },
-  { keywords: ['verify', 'mark done', 'mark pending', 'biometric done', 'status'], question: 'How do I mark a student verified?', answer: 'Open the student\'s detail card, then choose "Biometric done" or "Not done yet" under Verify controls. It saves automatically and locks the record.' },
-  { keywords: ['change my password', 'my password', 'own password'], question: 'How do I change my password?', answer: 'Open the "Welcome, ___" menu (top right) and click "Change Password."' },
-  { keywords: ['locked', 'lock mean'], question: 'What does "locked" mean?', answer: 'Once a student is marked, the record locks to prevent accidental changes. An admin with the right permission can unlock it if a correction is needed.' },
-  { keywords: ['contact', 'support', 'help desk'], question: 'Who do I contact for help?', answer: 'Contact AKC IT Support (Adamas Tech Consulting) for anything this assistant can\'t answer.' }
-];
-
-const HELP_FAQ_BY_PERMISSION = {
-  unlockRecords: { keywords: ['unlock'], question: 'How do I unlock a record?', answer: 'Open the student\'s detail card, click "Unlock (admin)", then enter the admin password in the popup that appears.' },
-  importStudents: { keywords: ['import new student', 'add new student', 'new registration'], question: 'How do I import new students?', answer: 'Welcome menu → Import New Students → upload your Excel/CSV file → review the preview → confirm with the admin password.' },
-  importVerification: { keywords: ['import verification', 'machine report', 'bulk verify'], question: 'How do I import verification updates?', answer: 'Welcome menu → Import Verification Updates → upload the biometric machine\'s report. Matching students get marked Done automatically.' },
-  downloadCsv: { keywords: ['download roster', 'export csv', 'csv'], question: 'How do I download the roster?', answer: 'Welcome menu → Download Roster (CSV) → choose your filters (status/site) → Download.' },
-  manageUsers: { keywords: ['create user', 'new account', 'manage user'], question: 'How do I create a new user?', answer: 'Welcome menu → Manage Users → fill in the Add New User form → choose manual or auto-generated password → Create User (you\'ll be asked for the admin password in a popup).' },
-  resetPasswords: { keywords: ['reset password', 'someone\'s password'], question: 'How do I reset someone\'s password?', answer: 'Welcome menu → Reset User Password → pick their account → enter a new password → confirm with the admin password.' },
-  composeMessage: { keywords: ['send message', 'broadcast', 'announcement', 'compose message'], question: 'How do I send a message to staff?', answer: 'Welcome menu → Compose Message → write your message → pick a style → Publish.' },
-  viewActivityLog: { keywords: ['activity log', 'recent activity', 'audit'], question: 'How can I see recent activity?', answer: 'Welcome menu → Activity Log shows everyone\'s actions with timestamps.' },
-  deleteStudent: { keywords: ['delete student', 'remove student'], question: 'How do I delete a student record?', answer: 'Open their detail card → Delete Student → confirm, then enter the admin password.' }
-};
-
-function getHelpFaqList(){
-  const isAdmin = sessionStorage.getItem(ADMIN_KEY) === 'yes';
-  let perms = {};
-  try{ perms = JSON.parse(sessionStorage.getItem(PERMISSIONS_KEY) || '{}'); }catch(e){ perms = {}; }
-  let list = HELP_FAQ_GENERAL.slice();
-  if(isAdmin){
-    Object.keys(HELP_FAQ_BY_PERMISSION).forEach(key => {
-      if(perms[key]) list.push(HELP_FAQ_BY_PERMISSION[key]);
-    });
-  }
-  return list;
+let cachedHelpFaqList = null;
+async function getHelpFaqList(){
+  if(cachedHelpFaqList) return cachedHelpFaqList;
+  try{
+    const data = await runScript('getHelpFaqList', sessionStorage.getItem(SESSION_TOKEN_KEY), 'main');
+    if(data.ok){
+      cachedHelpFaqList = data.list;
+      return cachedHelpFaqList;
+    }
+  }catch(e){ /* fall through to empty list below */ }
+  return [];
 }
 
-function findHelpAnswer(text){
+async function findHelpAnswer(text){
   const q = text.toLowerCase();
-  const list = getHelpFaqList();
+  const list = await getHelpFaqList();
   for(const item of list){
     if(item.keywords.some(k => q.indexOf(k) !== -1)) return { answer: item.answer, matchedQuestion: item.question };
   }
@@ -6451,10 +6431,10 @@ function appendHelpMessage(text, fromUser, allowHtml){
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-function renderHelpChips(){
+async function renderHelpChips(){
   const chipsEl = document.getElementById('helpChatChips');
   if(!chipsEl) return;
-  const list = getHelpFaqList();
+  const list = await getHelpFaqList();
   chipsEl.innerHTML = list.map((item, i) => `<div class="help-chip" data-idx="${i}" style="font-size:11px; border:1px solid var(--color-border); border-radius:20px; padding:4px 10px; color:var(--color-navy-deep); cursor:pointer;">${escapeHtml(item.question)}</div>`).join('');
   chipsEl.querySelectorAll('.help-chip').forEach(chip => {
     chip.addEventListener('click', () => {
@@ -6751,7 +6731,7 @@ async function submitHelpQuestion(){
   appendHelpMessage(text, true);
   helpChatInput.value = '';
 
-  const result = findHelpAnswer(text);
+  const result = await findHelpAnswer(text);
   if(result.matchedQuestion){
     appendHelpMessage(result.answer, false);
     runScript('logHelpQuestion', result.matchedQuestion).catch(() => {});
