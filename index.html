@@ -185,6 +185,10 @@
   }
   @keyframes skeletonShimmer{ 0%{ background-position:100% 50%; } 100%{ background-position:0 50%; } }
   @keyframes contentFadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes chatToggleBounce{ 0%,100%{ transform:translateY(0); } 20%{ transform:translateY(-10px); } 40%{ transform:translateY(0); } 60%{ transform:translateY(-5px); } 80%{ transform:translateY(0); } }
+  @keyframes chatBubbleIn{ from{ opacity:0; transform:translateY(8px) scale(.97); } to{ opacity:1; transform:translateY(0) scale(1); } }
+  .chat-toggle-notify{ animation:chatToggleBounce .7s ease; }
+  .chat-bubble-in{ animation:chatBubbleIn .25s ease; }
   .content-fade-in{ animation:contentFadeIn .3s ease-out; }
   #isSubmitProgressBar, #ivSubmitProgressBar{
     left:0; width:0%; transition:width .15s ease;
@@ -775,7 +779,9 @@
   <div id="staffChatConvoView" style="display:none; flex-direction:column;">
     <div id="staffChatMessages" style="padding:12px 14px; display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto;"></div>
     <div id="staffChatTypingIndicator" style="display:none; padding:0 14px 6px; font-size:11.5px; color:var(--color-text-muted); font-style:italic;">typing…</div>
-    <div style="padding:10px 12px; border-top:1px solid var(--color-border); display:flex; gap:6px; align-items:center;">
+    <div style="padding:10px 12px; border-top:1px solid var(--color-border); display:flex; gap:6px; align-items:center; position:relative;">
+      <span id="staffChatEmojiBtn" style="font-size:18px; cursor:pointer; flex-shrink:0; line-height:1;" title="Emoji">🙂</span>
+      <div id="staffChatEmojiPicker" style="display:none; position:absolute; bottom:44px; left:10px; background:#fff; border:1px solid var(--color-border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.15); padding:8px; width:216px; grid-template-columns:repeat(8, 1fr); gap:2px; z-index:10;"></div>
       <input type="text" id="staffChatInput" placeholder="Type a message…" style="flex:1; border:1px solid var(--color-border); border-radius:20px; padding:7px 12px; font-size:12.5px; font-family:var(--font-body); min-width:0;">
       <button id="staffChatSendBtn" style="width:32px; height:32px; border-radius:50%; background:var(--color-navy); color:#fff; border:none; cursor:pointer; flex-shrink:0; font-size:14px;">➤</button>
     </div>
@@ -6703,20 +6709,28 @@ async function renderStaffChatOnlineList(){
   }
 }
 
+let staffChatLastRenderedCount = 0;
 function renderStaffChatMessages(messages){
   if(!staffChatMessagesEl) return;
   const myUserId = sessionStorage.getItem(USERID_KEY);
-  staffChatMessagesEl.innerHTML = messages.map(m => {
+  const isInitialLoad = staffChatLastRenderedCount === 0;
+  staffChatMessagesEl.innerHTML = messages.map((m, i) => {
     const mine = m.from === myUserId;
     const time = new Date(m.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const isNew = !isInitialLoad && i >= staffChatLastRenderedCount;
     return `
-      <div style="align-self:${mine ? 'flex-end' : 'flex-start'}; max-width:85%;">
+      <div class="${isNew ? 'chat-bubble-in' : ''}" style="align-self:${mine ? 'flex-end' : 'flex-start'}; max-width:85%;">
         <div style="background:${mine ? 'var(--color-navy)' : '#F0F2F6'}; color:${mine ? '#fff' : 'var(--color-navy-deep)'}; border-radius:10px; padding:8px 10px; font-size:12px;">${escapeHtml(m.text)}</div>
         <div style="font-size:9.5px; color:var(--color-text-muted); margin-top:2px; text-align:${mine ? 'right' : 'left'};">${time}</div>
       </div>
     `;
   }).join('');
-  staffChatMessagesEl.scrollTop = staffChatMessagesEl.scrollHeight;
+  if(isInitialLoad){
+    staffChatMessagesEl.scrollTop = staffChatMessagesEl.scrollHeight;
+  } else {
+    staffChatMessagesEl.scrollTo({ top: staffChatMessagesEl.scrollHeight, behavior: 'smooth' });
+  }
+  staffChatLastRenderedCount = messages.length;
 }
 
 async function pollStaffChatMessages(){
@@ -6733,6 +6747,7 @@ async function pollStaffChatMessages(){
 function openStaffChatConversation(userId, name){
   staffChatCurrentPartnerId = userId;
   staffChatCurrentPartnerName = name;
+  staffChatLastRenderedCount = 0;
   hideStaffChatTypingIndicator();
   if(staffChatHeaderTitle) staffChatHeaderTitle.textContent = name;
   if(staffChatHeaderAvatar) staffChatHeaderAvatar.textContent = initialsFor(name);
@@ -6804,6 +6819,11 @@ function handleIncomingChatMessage(message){
     updateStaffChatBadge();
     if(staffChatPanel && staffChatPanel.style.display === 'flex' && staffChatListView && staffChatListView.style.display !== 'none'){
       renderStaffChatConversationList();
+    }
+    if(staffChatToggle){
+      staffChatToggle.classList.remove('chat-toggle-notify');
+      void staffChatToggle.offsetWidth; // force a reflow so the animation re-triggers even if a message just arrived
+      staffChatToggle.classList.add('chat-toggle-notify');
     }
     if(typeof showToast === 'function') showToast(`New message from ${message.fromName}`, 'success');
   }
@@ -6943,6 +6963,32 @@ if(staffChatToggle && staffChatPanel){
     staffChatLastTypingSentAt = now;
     try{ staffChatSocket.send(JSON.stringify({ type: 'typing', to: staffChatCurrentPartnerId })); }catch(e){ /* connection likely mid-reconnect; next keystroke will retry */ }
   });
+
+  const staffChatEmojiBtn = document.getElementById('staffChatEmojiBtn');
+  const staffChatEmojiPicker = document.getElementById('staffChatEmojiPicker');
+  const STAFF_CHAT_EMOJIS = ['😀','😂','😊','😍','😉','😎','🤔','😅','😢','😮','👍','👎','🙏','👏','🎉','🔥','❤️','✅','❌','⏰','📌','📎','⚠️','💬'];
+  if(staffChatEmojiBtn && staffChatEmojiPicker){
+    staffChatEmojiPicker.innerHTML = STAFF_CHAT_EMOJIS.map(e => `<span class="staff-chat-emoji-opt" style="font-size:17px; cursor:pointer; text-align:center; padding:3px; border-radius:6px;">${e}</span>`).join('');
+    staffChatEmojiPicker.querySelectorAll('.staff-chat-emoji-opt').forEach(el => {
+      el.addEventListener('click', () => {
+        const start = staffChatInput.selectionStart || staffChatInput.value.length;
+        const end = staffChatInput.selectionEnd || staffChatInput.value.length;
+        staffChatInput.value = staffChatInput.value.slice(0, start) + el.textContent + staffChatInput.value.slice(end);
+        const newPos = start + el.textContent.length;
+        staffChatInput.setSelectionRange(newPos, newPos);
+        staffChatInput.focus();
+      });
+    });
+    staffChatEmojiBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      staffChatEmojiPicker.style.display = staffChatEmojiPicker.style.display === 'grid' ? 'none' : 'grid';
+    });
+    document.addEventListener('click', (e) => {
+      if(staffChatEmojiPicker.style.display === 'grid' && !staffChatEmojiPicker.contains(e.target) && e.target !== staffChatEmojiBtn){
+        staffChatEmojiPicker.style.display = 'none';
+      }
+    });
+  }
 
   // Show the toggle for everyone except read-only viewer and demo accounts -
   // either side can start a conversation, so this isn't admin-only.
