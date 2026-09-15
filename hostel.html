@@ -492,6 +492,7 @@
 
   <div id="staffChatConvoView" style="display:none; flex-direction:column;">
     <div id="staffChatMessages" style="padding:12px 14px; display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto;"></div>
+    <div id="staffChatTypingIndicator" style="display:none; padding:0 14px 6px; font-size:11.5px; color:var(--color-text-muted); font-style:italic;">typing…</div>
     <div style="padding:10px 12px; border-top:1px solid var(--color-border); display:flex; gap:6px; align-items:center;">
       <input type="text" id="staffChatInput" placeholder="Type a message…" style="flex:1; border:1px solid var(--color-border); border-radius:20px; padding:7px 12px; font-size:12.5px; font-family:var(--font-body); min-width:0;">
       <button id="staffChatSendBtn" style="width:32px; height:32px; border-radius:50%; background:var(--color-navy); color:#fff; border:none; cursor:pointer; flex-shrink:0; font-size:14px;">➤</button>
@@ -3932,6 +3933,8 @@ let staffChatCurrentMessages = [];
 let staffChatSocket = null;
 let staffChatReconnectDelay = 2000;
 let staffChatReconnectTimer = null;
+let staffChatLastTypingSentAt = 0;
+let staffChatTypingHideTimer = null;
 
 function initialsFor(name){
   if(!name) return '?';
@@ -4020,6 +4023,7 @@ async function pollStaffChatMessages(){
 function openStaffChatConversation(userId, name){
   staffChatCurrentPartnerId = userId;
   staffChatCurrentPartnerName = name;
+  hideStaffChatTypingIndicator();
   if(staffChatHeaderTitle) staffChatHeaderTitle.textContent = name;
   if(staffChatHeaderAvatar) staffChatHeaderAvatar.textContent = initialsFor(name);
   if(staffChatBackBtn) staffChatBackBtn.style.display = 'inline';
@@ -4084,6 +4088,7 @@ function handleIncomingChatMessage(message){
   if(staffChatCurrentPartnerId && message.from === staffChatCurrentPartnerId && staffChatPanel && staffChatPanel.style.display === 'flex'){
     staffChatCurrentMessages.push(message);
     renderStaffChatMessages(staffChatCurrentMessages);
+    hideStaffChatTypingIndicator();
     runScript('getChatMessages', staffChatCurrentPartnerId, sessionStorage.getItem(SESSION_TOKEN_KEY)).catch(() => {}); // marks it read server-side
   } else {
     updateStaffChatBadge();
@@ -4092,6 +4097,22 @@ function handleIncomingChatMessage(message){
     }
     if(typeof showToast === 'function') showToast(`New message from ${message.fromName}`, 'success');
   }
+}
+
+function hideStaffChatTypingIndicator(){
+  const el = document.getElementById('staffChatTypingIndicator');
+  if(el) el.style.display = 'none';
+  if(staffChatTypingHideTimer){ clearTimeout(staffChatTypingHideTimer); staffChatTypingHideTimer = null; }
+}
+
+function handleIncomingTypingSignal(fromUserId){
+  if(!staffChatCurrentPartnerId || fromUserId !== staffChatCurrentPartnerId) return;
+  if(!staffChatPanel || staffChatPanel.style.display !== 'flex') return;
+  if(!staffChatConvoView || staffChatConvoView.style.display === 'none') return;
+  const el = document.getElementById('staffChatTypingIndicator');
+  if(el) el.style.display = 'block';
+  if(staffChatTypingHideTimer) clearTimeout(staffChatTypingHideTimer);
+  staffChatTypingHideTimer = setTimeout(hideStaffChatTypingIndicator, 3000);
 }
 
 // Opens the real-time connection for instant chat delivery. Reconnects
@@ -4113,6 +4134,7 @@ function connectStaffChatWebSocket(){
     try{
       const data = JSON.parse(event.data);
       if(data.type === 'chatMessage' && data.message) handleIncomingChatMessage(data.message);
+      if(data.type === 'typing' && data.from) handleIncomingTypingSignal(data.from);
     }catch(e){ /* ignore malformed payloads */ }
   });
   staffChatSocket.addEventListener('close', () => {
@@ -4200,6 +4222,13 @@ if(staffChatToggle && staffChatPanel){
   if(staffChatBackBtn) staffChatBackBtn.addEventListener('click', closeStaffChatConversation);
   if(staffChatSendBtn) staffChatSendBtn.addEventListener('click', sendStaffChatMessage);
   if(staffChatInput) staffChatInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') sendStaffChatMessage(); });
+  if(staffChatInput) staffChatInput.addEventListener('input', () => {
+    if(!staffChatCurrentPartnerId || !staffChatSocket || staffChatSocket.readyState !== WebSocket.OPEN) return;
+    const now = Date.now();
+    if(now - staffChatLastTypingSentAt < 2000) return; // throttle - not on every keystroke
+    staffChatLastTypingSentAt = now;
+    try{ staffChatSocket.send(JSON.stringify({ type: 'typing', to: staffChatCurrentPartnerId })); }catch(e){ /* connection likely mid-reconnect; next keystroke will retry */ }
+  });
 
   // Show the toggle for everyone except read-only viewer and demo accounts -
   // either side can start a conversation, so this isn't admin-only.
