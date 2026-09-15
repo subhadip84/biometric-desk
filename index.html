@@ -4211,10 +4211,10 @@ window.addEventListener('pagehide', () => {
   const seconds = totalSeconds % 60;
   const durationText = hours > 0 ? `${hours}h ${minutes}m` : (minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`);
   const actorName = sessionStorage.getItem(USERNAME_KEY) || 'unknown';
-  const currentUserId = sessionStorage.getItem(USERID_KEY);
+  const currentSessionToken = sessionStorage.getItem(SESSION_TOKEN_KEY);
 
   const payload = new Blob(
-    [JSON.stringify({ fn: 'logSessionEnd', args: [actorName, durationText + ' (tab closed)', currentUserId] })],
+    [JSON.stringify({ fn: 'logSessionEnd', args: [actorName, durationText + ' (tab closed)', currentSessionToken] })],
     { type: 'text/plain;charset=utf-8' }
   );
   navigator.sendBeacon(API_BASE_URL, payload);
