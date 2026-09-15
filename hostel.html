@@ -439,8 +439,13 @@
       </div>
 
       <div class="panel" id="hostelOnlineUsersPanel" style="margin-top:20px; display:none;">
-        <h2 style="margin:0 0 4px;">Who's Online Now</h2>
-        <div style="font-size:11.5px; color:var(--color-text-muted); margin-bottom:12px;">Staff currently active, based on recent activity</div>
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
+          <div>
+            <h2 style="margin:0 0 4px;">Who's Online Now</h2>
+            <div style="font-size:11.5px; color:var(--color-text-muted); margin-bottom:12px;">Staff currently active, based on recent activity</div>
+          </div>
+          <button class="btn btn-ghost" id="clearStalePresenceBtn" style="display:none; flex-shrink:0; font-size:11px; padding:5px 10px;" title="Removes anyone whose online status is stuck from a past session that didn't close cleanly - anyone genuinely still active reappears within a few minutes on their own">Clear stale sessions</button>
+        </div>
         <div id="hostelOnlineUsersContent"></div>
       </div>
 
@@ -567,6 +572,8 @@ if(isAdminOrDemo){
   document.getElementById('hostelForecastPanel').style.display = 'block';
   document.getElementById('hostelUnusualActivityPanel').style.display = 'block';
   document.getElementById('hostelOnlineUsersPanel').style.display = 'block';
+  const clearStalePresenceBtn = document.getElementById('clearStalePresenceBtn');
+  if(clearStalePresenceBtn) clearStalePresenceBtn.style.display = (sessionStorage.getItem(ADMIN_KEY) === 'yes' && sessionStorage.getItem(DEMO_KEY) !== 'yes') ? 'inline-flex' : 'none';
   document.getElementById('hostelSpotCheckPanel').style.display = 'flex';
   document.getElementById('hostelLeaderboardPanel').style.display = 'block';
   document.getElementById('hostelDuplicateCheckPanel').style.display = 'block';
@@ -1579,6 +1586,31 @@ async function renderHostelUnusualActivity(){
   }catch(err){
     contentEl.innerHTML = `<div style="font-size:12px; color:var(--color-text-muted);">Could not check for unusual activity right now.</div>`;
   }
+}
+
+const clearStalePresenceBtn = document.getElementById('clearStalePresenceBtn');
+if(clearStalePresenceBtn){
+  clearStalePresenceBtn.addEventListener('click', async () => {
+    const confirmed = await showConfirmModal(
+      "This resets who's shown as online for everyone. Anyone genuinely still active reappears within a few minutes on their own - this only clears entries stuck from a past session that didn't close cleanly.",
+      'Clear stale online sessions?'
+    );
+    if(!confirmed) return;
+    clearStalePresenceBtn.disabled = true;
+    try{
+      const data = await runScript('clearAllOnlinePresence', sessionStorage.getItem(SESSION_TOKEN_KEY));
+      if(data.ok){
+        showToast('Cleared. The online list will rebuild over the next few minutes.', 'success');
+        renderHostelOnlineUsers();
+      } else {
+        showToast(data.error || 'Could not clear stale sessions.', 'error');
+      }
+    }catch(e){
+      showToast('Could not clear stale sessions.', 'error');
+    }finally{
+      clearStalePresenceBtn.disabled = false;
+    }
+  });
 }
 
 async function renderHostelOnlineUsers(){
