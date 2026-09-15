@@ -781,7 +781,7 @@
     <div id="staffChatTypingIndicator" style="display:none; padding:0 14px 6px; font-size:11.5px; color:var(--color-text-muted); font-style:italic;">typing…</div>
     <div style="padding:10px 12px; border-top:1px solid var(--color-border); display:flex; gap:6px; align-items:center; position:relative;">
       <span id="staffChatEmojiBtn" style="font-size:18px; cursor:pointer; flex-shrink:0; line-height:1;" title="Emoji">🙂</span>
-      <div id="staffChatEmojiPicker" style="display:none; position:absolute; bottom:44px; left:10px; background:#fff; border:1px solid var(--color-border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.15); padding:8px; width:216px; grid-template-columns:repeat(8, 1fr); gap:2px; z-index:10;"></div>
+      <div id="staffChatEmojiPicker" style="display:none; position:absolute; bottom:44px; left:10px; background:#fff; border:1px solid var(--color-border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.15); padding:8px; width:216px; max-width:calc(100% - 20px); box-sizing:border-box; grid-template-columns:repeat(8, minmax(0, 1fr)); gap:2px; z-index:10; overflow:hidden;"></div>
       <input type="text" id="staffChatInput" placeholder="Type a message…" style="flex:1; border:1px solid var(--color-border); border-radius:20px; padding:7px 12px; font-size:12.5px; font-family:var(--font-body); min-width:0;">
       <button id="staffChatSendBtn" style="width:32px; height:32px; border-radius:50%; background:var(--color-navy); color:#fff; border:none; cursor:pointer; flex-shrink:0; font-size:14px;">➤</button>
     </div>
@@ -6651,6 +6651,7 @@ let staffChatReconnectDelay = 2000;
 let staffChatReconnectTimer = null;
 let staffChatLastTypingSentAt = 0;
 let staffChatTypingHideTimer = null;
+let staffChatOtherPersonLastReadAt = 0;
 
 function initialsFor(name){
   if(!name) return '?';
@@ -6718,10 +6719,12 @@ function renderStaffChatMessages(messages){
     const mine = m.from === myUserId;
     const time = new Date(m.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const isNew = !isInitialLoad && i >= staffChatLastRenderedCount;
+    const seen = mine && m.at <= staffChatOtherPersonLastReadAt;
+    const tick = mine ? `<span style="color:${seen ? '#4FC3F7' : 'var(--color-text-muted)'}; margin-left:3px;">${seen ? '✓✓' : '✓'}</span>` : '';
     return `
       <div class="${isNew ? 'chat-bubble-in' : ''}" style="align-self:${mine ? 'flex-end' : 'flex-start'}; max-width:85%;">
         <div style="background:${mine ? 'var(--color-navy)' : '#F0F2F6'}; color:${mine ? '#fff' : 'var(--color-navy-deep)'}; border-radius:10px; padding:8px 10px; font-size:12px;">${escapeHtml(m.text)}</div>
-        <div style="font-size:9.5px; color:var(--color-text-muted); margin-top:2px; text-align:${mine ? 'right' : 'left'};">${time}</div>
+        <div style="font-size:9.5px; color:var(--color-text-muted); margin-top:2px; text-align:${mine ? 'right' : 'left'};">${time}${tick}</div>
       </div>
     `;
   }).join('');
@@ -6739,6 +6742,7 @@ async function pollStaffChatMessages(){
     const data = await runScript('getChatMessages', staffChatCurrentPartnerId, sessionStorage.getItem(SESSION_TOKEN_KEY));
     if(data.ok){
       staffChatCurrentMessages = data.messages;
+      staffChatOtherPersonLastReadAt = data.otherPersonLastReadAt || 0;
       renderStaffChatMessages(staffChatCurrentMessages);
     }
   }catch(e){ /* silent - next poll will retry */ }
@@ -6748,6 +6752,7 @@ function openStaffChatConversation(userId, name){
   staffChatCurrentPartnerId = userId;
   staffChatCurrentPartnerName = name;
   staffChatLastRenderedCount = 0;
+  staffChatOtherPersonLastReadAt = 0;
   hideStaffChatTypingIndicator();
   if(staffChatHeaderTitle) staffChatHeaderTitle.textContent = name;
   if(staffChatHeaderAvatar) staffChatHeaderAvatar.textContent = initialsFor(name);
@@ -6849,6 +6854,16 @@ function handleIncomingTypingSignal(fromUserId){
   staffChatTypingHideTimer = setTimeout(hideStaffChatTypingIndicator, 3000);
 }
 
+// The other person just read our messages - update tick status instantly
+// rather than waiting for the next fallback poll.
+function handleIncomingReadReceipt(fromUserId){
+  if(!staffChatCurrentPartnerId || fromUserId !== staffChatCurrentPartnerId) return;
+  staffChatOtherPersonLastReadAt = Date.now();
+  if(staffChatPanel && staffChatPanel.style.display === 'flex' && staffChatConvoView && staffChatConvoView.style.display !== 'none'){
+    renderStaffChatMessages(staffChatCurrentMessages);
+  }
+}
+
 // Opens the real-time connection for instant chat delivery. Reconnects
 // automatically with a short backoff if the connection drops (network
 // blip, server restart) rather than silently going quiet - the polling
@@ -6869,6 +6884,7 @@ function connectStaffChatWebSocket(){
       const data = JSON.parse(event.data);
       if(data.type === 'chatMessage' && data.message) handleIncomingChatMessage(data.message);
       if(data.type === 'typing' && data.from) handleIncomingTypingSignal(data.from);
+      if(data.type === 'read' && data.from) handleIncomingReadReceipt(data.from);
     }catch(e){ /* ignore malformed payloads */ }
   });
   staffChatSocket.addEventListener('close', () => {
