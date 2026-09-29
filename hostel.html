@@ -3067,7 +3067,8 @@ function renderDetail(s){
   }
 
   if(locked && isAdminOrDemo){
-    detailArea.querySelector('#unlockHostelBtn').addEventListener('click', () => {
+    const unlockHostelBtnEl = detailArea.querySelector('#unlockHostelBtn');
+    if(unlockHostelBtnEl) unlockHostelBtnEl.addEventListener('click', () => {
       showUnlockModal(async (password) => {
         const data = await runScript('adminUnlockHostel', s.id, password, sessionStorage.getItem(SESSION_TOKEN_KEY));
         if(!data.ok) throw new Error(data.error || 'Unlock failed.');
