@@ -2982,7 +2982,8 @@ function renderDetail(r){
 
   if(locked){
     if(canUnlock){
-      document.getElementById('unlockBtn').addEventListener('click', () => {
+      const unlockBtnEl = document.getElementById('unlockBtn');
+      if(unlockBtnEl) unlockBtnEl.addEventListener('click', () => {
         showUnlockModal(async (password) => {
           const data = await runScript('adminUnlock', r.id, password, sessionStorage.getItem(SESSION_TOKEN_KEY));
           if(!data.ok) throw new Error(data.error || 'Unlock failed');
