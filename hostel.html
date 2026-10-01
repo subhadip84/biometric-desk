@@ -2305,6 +2305,119 @@ function showUnlockModal(onSubmit, title, confirmLabel){
   input.addEventListener('keydown', e => { if(e.key === 'Enter') submit(); });
 }
 
+function showAddSingleHostelStudentModal(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:420px;">
+      <h3>Add One Student</h3>
+      <div style="font-size:12.5px; color:var(--color-text-muted); margin-bottom:14px;">For adding a single hostel student without a file upload. Use Bulk Import for several at once.</div>
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Name *</label>
+      <input type="text" id="ahsName" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Application No</label>
+      <input type="text" id="ahsAppNo" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Registration No</label>
+      <input type="text" id="ahsRegNo" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <div style="font-size:11px; color:var(--color-text-muted); margin:-6px 0 10px;">At least one of Application No or Registration No is required.</div>
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Machine Code</label>
+      <input type="text" id="ahsMachineCode" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Site Code</label>
+      <input type="text" id="ahsSiteCode" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Course</label>
+      <input type="text" id="ahsCourse" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Admission Type</label>
+      <input type="text" id="ahsAdmissionType" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Gender</label>
+      <input type="text" id="ahsGender" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Hostel Name</label>
+      <input type="text" id="ahsHostelName" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Room No</label>
+      <input type="text" id="ahsRoomNo" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Food Coupon</label>
+      <input type="text" id="ahsFoodCoupon" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <div id="ahsWarnings" style="display:none; background:var(--color-pending-soft); border-radius:8px; padding:10px 12px; margin-bottom:10px; font-size:12px; color:var(--color-pending); line-height:1.5;"></div>
+      <label style="font-size:12px; font-weight:600; color:var(--color-text-muted); display:block; margin-bottom:4px;">Admin password</label>
+      <input type="password" id="ahsAdminPassword" autocomplete="off" placeholder="Required to add this student" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--color-border); font-size:13px; font-family:var(--font-body); margin-bottom:10px; box-sizing:border-box;">
+      <div class="modal-error" id="ahsError"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="ahsCancelBtn">Cancel</button>
+        <button class="btn btn-primary" id="ahsSubmitBtn">Add Student</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const errorEl = overlay.querySelector('#ahsError');
+  const warningsEl = overlay.querySelector('#ahsWarnings');
+  const submitBtn = overlay.querySelector('#ahsSubmitBtn');
+  const cancelBtn = overlay.querySelector('#ahsCancelBtn');
+  overlay.querySelector('#ahsName').focus();
+
+  let alreadyReviewed = false;
+
+  function close(){ overlay.remove(); }
+
+  function getFields(){
+    return {
+      name: overlay.querySelector('#ahsName').value.trim(),
+      appNo: overlay.querySelector('#ahsAppNo').value.trim(),
+      regNo: overlay.querySelector('#ahsRegNo').value.trim(),
+      machineCode: overlay.querySelector('#ahsMachineCode').value.trim(),
+      siteCode: overlay.querySelector('#ahsSiteCode').value.trim(),
+      course: overlay.querySelector('#ahsCourse').value.trim(),
+      admissionType: overlay.querySelector('#ahsAdmissionType').value.trim(),
+      gender: overlay.querySelector('#ahsGender').value.trim(),
+      hostelName: overlay.querySelector('#ahsHostelName').value.trim(),
+      roomNo: overlay.querySelector('#ahsRoomNo').value.trim(),
+      foodCoupon: overlay.querySelector('#ahsFoodCoupon').value.trim()
+    };
+  }
+
+  async function submit(){
+    const fields = getFields();
+    const adminPassword = overlay.querySelector('#ahsAdminPassword').value;
+    errorEl.textContent = '';
+
+    if(!fields.name){ errorEl.textContent = 'Name is required.'; return; }
+    if(!fields.appNo && !fields.regNo){ errorEl.textContent = 'Enter at least an Application No or a Registration No.'; return; }
+    if(!adminPassword){ errorEl.textContent = 'Enter the admin password to add this student.'; return; }
+
+    if(!alreadyReviewed){
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Reviewing…';
+      try{
+        const review = await runScript('reviewNewHostelStudentEntry', fields);
+        if(review.ok && review.warnings && review.warnings.length){
+          warningsEl.innerHTML = '⚠️ ' + review.warnings.map(w => escapeHtml(w)).join('<br>⚠️ ');
+          warningsEl.style.display = 'block';
+          alreadyReviewed = true;
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Add Anyway';
+          return;
+        }
+      }catch(e){ /* review is advisory - if it fails, fall through and add normally */ }
+      alreadyReviewed = true;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Adding…';
+    try{
+      const data = await runScript('addSingleHostelStudent', fields, adminPassword, sessionStorage.getItem(SESSION_TOKEN_KEY));
+      if(!data.ok){ throw new Error(data.error || 'Could not add student.'); }
+      close();
+      showToast(`${fields.name} added.`, 'success');
+      await fetchStudents();
+    }catch(err){
+      errorEl.textContent = err.message || 'Could not add student.';
+      submitBtn.disabled = false;
+      submitBtn.textContent = alreadyReviewed ? 'Add Anyway' : 'Add Student';
+    }
+  }
+
+  cancelBtn.addEventListener('click', close);
+  submitBtn.addEventListener('click', submit);
+}
+
 function showEditHostelStudentModal(student, onSave){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -3562,17 +3675,21 @@ function showHostelImportChoiceModal(){
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-box" style="max-width:400px;">
+    <div class="modal-box" style="max-width:460px;">
       <h3>Import Students</h3>
       <div style="font-size:12.5px; color:var(--color-text-muted); margin-bottom:16px;">What would you like to do?</div>
-      <div style="display:flex; gap:10px;">
-        <button id="hicNewBtn" style="flex:1; border:2px solid var(--color-navy); border-radius:10px; padding:16px 10px; background:#fff; cursor:pointer; text-align:center;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-navy)" stroke-width="2" style="margin:0 auto 8px; display:block;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg>
-          <div style="font-size:12.5px; font-weight:600; color:var(--color-navy);">Add New Students</div>
+      <div style="display:flex; gap:8px;">
+        <button id="hicNewBtn" style="flex:1; border:2px solid var(--color-navy); border-radius:10px; padding:14px 8px; background:#fff; cursor:pointer; text-align:center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-navy)" stroke-width="2" style="margin:0 auto 7px; display:block;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m3-3h-6"/></svg>
+          <div style="font-size:11.5px; font-weight:600; color:var(--color-navy); line-height:1.3;">Bulk Import (File)</div>
         </button>
-        <button id="hicInactiveBtn" style="flex:1; border:1px solid var(--color-border); border-radius:10px; padding:16px 10px; background:#fff; cursor:pointer; text-align:center;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" style="margin:0 auto 8px; display:block;"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M2 7l4.44-4.5A2 2 0 0 1 7.9 2h8.2a2 2 0 0 1 1.46.5L22 7"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-          <div style="font-size:12.5px; font-weight:600; color:var(--color-text-muted);">Mark Inactive</div>
+        <button id="hicSingleBtn" style="flex:1; border:1px solid var(--color-border); border-radius:10px; padding:14px 8px; background:#fff; cursor:pointer; text-align:center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" style="margin:0 auto 7px; display:block;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          <div style="font-size:11.5px; font-weight:600; color:var(--color-text-muted); line-height:1.3;">Add One Student</div>
+        </button>
+        <button id="hicInactiveBtn" style="flex:1; border:1px solid var(--color-border); border-radius:10px; padding:14px 8px; background:#fff; cursor:pointer; text-align:center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" style="margin:0 auto 7px; display:block;"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M2 7l4.44-4.5A2 2 0 0 1 7.9 2h8.2a2 2 0 0 1 1.46.5L22 7"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          <div style="font-size:11.5px; font-weight:600; color:var(--color-text-muted); line-height:1.3;">Mark Inactive</div>
         </button>
       </div>
       <button class="btn btn-ghost" id="hicCancelBtn" style="width:100%; margin-top:14px;">Cancel</button>
@@ -3581,6 +3698,7 @@ function showHostelImportChoiceModal(){
   document.body.appendChild(overlay);
   function close(){ overlay.remove(); }
   overlay.querySelector('#hicNewBtn').addEventListener('click', () => { close(); showHostelImportModal('new'); });
+  overlay.querySelector('#hicSingleBtn').addEventListener('click', () => { close(); showAddSingleHostelStudentModal(); });
   overlay.querySelector('#hicInactiveBtn').addEventListener('click', () => { close(); showHostelImportInactiveModal(); });
   overlay.querySelector('#hicCancelBtn').addEventListener('click', close);
 }
